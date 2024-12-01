@@ -92,6 +92,12 @@ const Preview = () => {
     }
   };
 
+  const showConvertButton = mimeType && (
+    mimeType.includes('webm') || 
+    mimeType === 'video/webm' || 
+    mimeType.startsWith('video/webm')
+  );
+
   return (
     <div className="min-h-screen bg-gray-900 text-white p-6">
       <div className="max-w-4xl mx-auto space-y-6">
@@ -110,7 +116,7 @@ const Preview = () => {
                 <Download className="w-4 h-4 mr-2" />
                 Download Original
               </Button>
-              {mimeType?.includes('webm') && (
+              {showConvertButton && (
                 <Button 
                   onClick={convertToMP4} 
                   disabled={isConverting}

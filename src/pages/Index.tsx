@@ -297,19 +297,19 @@ const Index = () => {
 
           {recordingType === "camera" && (
             <div className="space-y-2">
-              <Label>Camera Resolution</Label>
+              <Label className="text-lg font-medium">Camera Resolution</Label>
               <RadioGroup
                 value={cameraResolution}
                 onValueChange={(value: "landscape" | "portrait") => setCameraResolution(value)}
                 className="flex space-x-4"
               >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="landscape" id="landscape" />
-                  <Label htmlFor="landscape">1920x1080 (Landscape)</Label>
+                <div className="flex items-center space-x-2 cursor-pointer hover:bg-gray-800 p-2 rounded-lg transition-colors">
+                  <RadioGroupItem value="landscape" id="landscape" className="cursor-pointer" />
+                  <Label htmlFor="landscape" className="cursor-pointer hover:text-primary">1920x1080 (Landscape)</Label>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="portrait" id="portrait" />
-                  <Label htmlFor="portrait">1080x1920 (Portrait)</Label>
+                <div className="flex items-center space-x-2 cursor-pointer hover:bg-gray-800 p-2 rounded-lg transition-colors">
+                  <RadioGroupItem value="portrait" id="portrait" className="cursor-pointer" />
+                  <Label htmlFor="portrait" className="cursor-pointer hover:text-primary">1080x1920 (Portrait)</Label>
                 </div>
               </RadioGroup>
             </div>

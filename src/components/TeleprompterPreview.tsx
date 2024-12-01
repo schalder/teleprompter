@@ -13,7 +13,7 @@ const TeleprompterPreview = ({ text, fontSize, speed, isScrolling }: Teleprompte
   useEffect(() => {
     if (containerRef.current && isScrolling) {
       const scrollHeight = containerRef.current.scrollHeight;
-      const duration = (scrollHeight * (100 - speed)) / 50; // Adjust scroll speed based on the speed setting
+      const duration = (scrollHeight * (100 - speed)) / 50;
       
       containerRef.current.style.transition = `transform ${duration}s linear`;
       containerRef.current.style.transform = `translateY(-${scrollHeight}px)`;
@@ -21,7 +21,7 @@ const TeleprompterPreview = ({ text, fontSize, speed, isScrolling }: Teleprompte
       containerRef.current.style.transition = 'none';
       containerRef.current.style.transform = 'translateY(0)';
     }
-  }, [isScrolling, speed]);
+  }, [isScrolling, speed, text]); // Added text dependency to reset scroll when text changes
 
   return (
     <div className="mt-8 p-6 bg-gray-800 rounded-lg overflow-hidden h-[400px] relative">
@@ -30,6 +30,9 @@ const TeleprompterPreview = ({ text, fontSize, speed, isScrolling }: Teleprompte
         className="transition-transform"
         style={{
           fontSize: `${fontSize}px`,
+          lineHeight: '1.5',
+          whiteSpace: 'pre-wrap',
+          wordBreak: 'break-word'
         }}
       >
         {text || "Your text will appear here..."}

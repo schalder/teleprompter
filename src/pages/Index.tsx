@@ -47,7 +47,7 @@ const Index = () => {
 
       let stream: MediaStream | null = null;
 
-      if (recordingType === "camera" || recordingType === "both") {
+      if (recordingType === "camera") {
         stream = await navigator.mediaDevices.getUserMedia({ 
           video: {
             width: cameraResolution === "landscape" ? 1920 : 1080,
@@ -90,8 +90,6 @@ const Index = () => {
     setIsPreviewing(false);
     try {
       let finalStream: MediaStream;
-      let pipVideo: HTMLVideoElement | null = null;
-      let stopButton: HTMLButtonElement | null = null;
 
       const getVideoConstraints = (isPortrait: boolean) => ({
         width: { ideal: isPortrait ? 1080 : 1920 },
@@ -115,7 +113,7 @@ const Index = () => {
           audio: audioConstraints
         };
         finalStream = await navigator.mediaDevices.getUserMedia(constraints);
-      } else if (recordingType === "screen") {
+      } else {
         finalStream = await navigator.mediaDevices.getDisplayMedia({
           video: {
             ...videoConstraints,
@@ -123,107 +121,14 @@ const Index = () => {
           },
           audio: audioConstraints
         });
-      } else if (recordingType === "both") {
-        const cameraStream = await navigator.mediaDevices.getUserMedia({
-          video: videoConstraints,
-          audio: audioConstraints
-        });
-        const screenStream = await navigator.mediaDevices.getDisplayMedia({
-          video: {
-            ...videoConstraints,
-            displaySurface: 'monitor'
-          },
-          audio: {
-            ...audioConstraints,
-            echoCancellation: true,
-            noiseSuppression: true
-          }
-        });
-
-        const [screenTrack] = screenStream.getVideoTracks();
-        const [audioTrack] = cameraStream.getAudioTracks();
-        finalStream = new MediaStream([screenTrack, audioTrack]);
-
-        pipVideo = document.createElement("video");
-        pipVideo.srcObject = new MediaStream([cameraStream.getVideoTracks()[0]]);
-        pipVideo.autoplay = true;
-        pipVideo.muted = true;
-        pipVideo.setAttribute("id", "pip-video-overlay");
-        
-        stopButton = document.createElement("button");
-        stopButton.setAttribute("id", "floating-stop-button");
-        stopButton.textContent = "Stop Recording";
-        
-        const pipStyles = {
-          position: "fixed",
-          bottom: "20px",
-          right: "20px",
-          width: "180px",
-          height: "180px",
-          borderRadius: "50%",
-          objectFit: "cover",
-          zIndex: "2147483647",
-          border: "3px solid white",
-          boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
-          backgroundColor: "black",
-          transform: "translate3d(0,0,0)",
-          willChange: "transform",
-          pointerEvents: "none",
-          isolation: "isolate"
-        };
-
-        const stopButtonStyles = {
-          position: "fixed",
-          top: "20px",
-          right: "20px",
-          padding: "10px 20px",
-          backgroundColor: "#ef4444",
-          color: "white",
-          border: "none",
-          borderRadius: "8px",
-          cursor: "pointer",
-          fontWeight: "bold",
-          zIndex: "2147483647",
-          boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
-          transform: "translate3d(0,0,0)",
-          willChange: "transform",
-          isolation: "isolate"
-        };
-
-        Object.assign(pipVideo.style, pipStyles);
-        Object.assign(stopButton.style, stopButtonStyles);
-        
-        document.body.appendChild(pipVideo);
-        document.body.appendChild(stopButton);
-
-        stopButton.onclick = () => {
-          if (mediaRecorderRef.current) {
-            mediaRecorderRef.current.stop();
-          }
-        };
-
-        handleVisibilityChangeRef.current = () => {
-          if (document.visibilityState === "visible" && pipVideo) {
-            pipVideo.play().catch(() => {});
-          }
-        };
-
-        document.addEventListener("visibilitychange", handleVisibilityChangeRef.current);
-
-        screenTrack.addEventListener("ended", () => {
-          if (mediaRecorderRef.current) {
-            mediaRecorderRef.current.stop();
-          }
-        });
       }
 
       const options = {
         mimeType: 'video/webm;codecs=h264,opus',
-        videoBitsPerSecond: 8000000, // 8 Mbps for high quality
-        audioBitsPerSecond: 128000   // 128 kbps for audio
+        videoBitsPerSecond: 8000000,
+        audioBitsPerSecond: 128000
       };
       
-      // Fallback if WebM is not supported
       if (!MediaRecorder.isTypeSupported(options.mimeType)) {
         options.mimeType = 'video/mp4;codecs=avc1.42E01E,mp4a.40.2';
       }
@@ -243,26 +148,11 @@ const Index = () => {
           type: mediaRecorder.mimeType || 'video/mp4' 
         });
         
-        const pipVideo = document.getElementById("pip-video-overlay");
-        const stopButton = document.getElementById("floating-stop-button");
-        
-        if (pipVideo) {
-          pipVideo.remove();
-        }
-        if (stopButton) {
-          stopButton.remove();
-        }
-
-        if (handleVisibilityChangeRef.current) {
-          document.removeEventListener("visibilitychange", handleVisibilityChangeRef.current);
-          handleVisibilityChangeRef.current = null;
-        }
-        
         navigate("/preview", { state: { videoUrl: URL.createObjectURL(blob), mimeType: mediaRecorder.mimeType } });
       };
 
       stopPreview();
-      mediaRecorder.start(1000); // Capture chunks every second
+      mediaRecorder.start(1000);
       setIsRecording(true);
       toast({
         title: "Recording started",
@@ -281,10 +171,6 @@ const Index = () => {
     if (mediaRecorderRef.current) {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
-      const pipVideo = document.querySelector("video.fixed");
-      if (pipVideo) {
-        pipVideo.remove();
-      }
     }
   };
 

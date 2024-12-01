@@ -80,32 +80,51 @@ const Index = () => {
   };
 
   const startRecording = async () => {
-    setIsPreviewing(false); // Stop preview when recording starts
+    setIsPreviewing(false);
     try {
       let finalStream: MediaStream;
+      let pipVideo: HTMLVideoElement | null = null;
 
-      if (recordingType === "camera" || recordingType === "both") {
-        const mediaStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-        
-        if (recordingType === "both") {
-          const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-          const [screenTrack] = screenStream.getVideoTracks();
-          const [cameraTrack] = mediaStream.getVideoTracks();
-          const [audioTrack] = mediaStream.getAudioTracks();
-          finalStream = new MediaStream([screenTrack, audioTrack]);
-          
-          // Create PiP video element for camera
-          const pipVideo = document.createElement("video");
-          pipVideo.srcObject = new MediaStream([cameraTrack]);
-          pipVideo.classList.add("fixed", "bottom-4", "right-4", "rounded-full", "w-32", "h-32", "object-cover", "z-50");
-          pipVideo.autoplay = true;
-          document.body.appendChild(pipVideo);
-        } else {
-          finalStream = mediaStream;
-        }
-      } else {
-        // Screen only
-        finalStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+      if (recordingType === "camera") {
+        finalStream = await navigator.mediaDevices.getUserMedia({ 
+          video: true, 
+          audio: true 
+        });
+      } else if (recordingType === "screen") {
+        finalStream = await navigator.mediaDevices.getDisplayMedia({ 
+          video: true,
+          audio: true
+        });
+      } else if (recordingType === "both") {
+        // Get both camera and screen streams
+        const cameraStream = await navigator.mediaDevices.getUserMedia({ 
+          video: true, 
+          audio: true 
+        });
+        const screenStream = await navigator.mediaDevices.getDisplayMedia({ 
+          video: true 
+        });
+
+        // Create a composite stream with screen video and camera audio
+        const [screenTrack] = screenStream.getVideoTracks();
+        const [audioTrack] = cameraStream.getAudioTracks();
+        finalStream = new MediaStream([screenTrack, audioTrack]);
+
+        // Create and style PiP video element for camera
+        pipVideo = document.createElement("video");
+        pipVideo.srcObject = new MediaStream([cameraStream.getVideoTracks()[0]]);
+        pipVideo.autoplay = true;
+        pipVideo.style.position = "fixed";
+        pipVideo.style.bottom = "20px";
+        pipVideo.style.right = "20px";
+        pipVideo.style.width = "180px";
+        pipVideo.style.height = "180px";
+        pipVideo.style.borderRadius = "50%";
+        pipVideo.style.objectFit = "cover";
+        pipVideo.style.zIndex = "9999";
+        pipVideo.style.border = "3px solid white";
+        pipVideo.style.boxShadow = "0 4px 6px -1px rgb(0 0 0 / 0.1)";
+        document.body.appendChild(pipVideo);
       }
 
       const mediaRecorder = new MediaRecorder(finalStream);
@@ -120,6 +139,11 @@ const Index = () => {
 
       mediaRecorder.onstop = () => {
         const blob = new Blob(chunksRef.current, { type: "video/mp4" });
+        // Remove PiP video if it exists
+        const existingPipVideo = document.querySelector("video.fixed");
+        if (existingPipVideo) {
+          existingPipVideo.remove();
+        }
         navigate("/preview", { state: { videoUrl: URL.createObjectURL(blob) } });
       };
 

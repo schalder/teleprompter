@@ -5,6 +5,7 @@ export const useMediaStream = () => {
   const [previewStream, setPreviewStream] = useState<MediaStream | null>(null);
   const { toast } = useToast();
   const previewVideoRef = useRef<HTMLVideoElement | null>(null);
+  const hasAttemptedPermission = useRef(false);
 
   const startPreview = async (
     recordingType: "camera" | "screen",
@@ -15,27 +16,23 @@ export const useMediaStream = () => {
         previewStream.getTracks().forEach((track) => track.stop());
       }
 
+      // Reset permission attempt flag when starting new preview
+      hasAttemptedPermission.current = false;
+
       let stream: MediaStream | null = null;
 
       if (recordingType === "camera") {
-        // Check permissions first
-        try {
-          const permissions = await navigator.permissions.query({ name: 'camera' as PermissionName });
-          console.log('Camera permission status:', permissions.state);
-          
-          if (permissions.state === 'denied') {
-            throw new Error('Camera access is blocked. Please enable it in your browser settings.');
-          }
-        } catch (permError) {
-          console.log('Permission check error:', permError);
-          // Continue anyway as some mobile browsers don't support permissions API
-        }
-
+        // Detect if running on mobile
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        
+        // Set default resolution based on device type
+        const defaultResolution = isMobile ? "portrait" : cameraResolution;
+        
         // Request the stream with specific constraints
         stream = await navigator.mediaDevices.getUserMedia({
           video: {
-            width: { ideal: cameraResolution === "landscape" ? 1920 : 1080 },
-            height: { ideal: cameraResolution === "landscape" ? 1080 : 1920 },
+            width: { ideal: defaultResolution === "landscape" ? 1920 : 1080 },
+            height: { ideal: defaultResolution === "landscape" ? 1080 : 1920 },
             frameRate: { ideal: 30 },
             facingMode: "user",
           },
@@ -62,6 +59,7 @@ export const useMediaStream = () => {
           previewVideoRef.current.srcObject = stream;
           try {
             await previewVideoRef.current.play();
+            hasAttemptedPermission.current = true;
             toast({
               title: "Preview started",
               description: "Your camera preview is now active.",
@@ -74,25 +72,31 @@ export const useMediaStream = () => {
       }
     } catch (error) {
       console.error("Preview error:", error);
-      let errorMessage = "Failed to start preview. ";
       
-      if (error instanceof Error) {
-        if (error.name === "NotAllowedError" || error.name === "PermissionDeniedError") {
-          errorMessage += "Camera access was denied. Please grant camera and microphone permissions and try again.";
-        } else if (error.name === "NotFoundError") {
-          errorMessage += "No camera found. Please ensure your device has a camera and try again.";
-        } else if (error.name === "NotReadableError" || error.name === "AbortError") {
-          errorMessage += "Your camera might be in use by another application. Please close other apps using the camera and try again.";
-        } else {
-          errorMessage += error.message || "Please ensure camera and microphone permissions are granted and try again.";
+      // Only show error toast if we haven't already attempted to get permissions
+      if (!hasAttemptedPermission.current) {
+        let errorMessage = "Failed to start preview. ";
+        
+        if (error instanceof Error) {
+          if (error.name === "NotAllowedError" || error.name === "PermissionDeniedError") {
+            errorMessage = "Please grant camera and microphone permissions when prompted.";
+          } else if (error.name === "NotFoundError") {
+            errorMessage = "No camera found. Please ensure your device has a camera.";
+          } else if (error.name === "NotReadableError" || error.name === "AbortError") {
+            errorMessage = "Camera is in use by another app. Please close other camera apps.";
+          } else {
+            errorMessage = error.message || "Please check your camera permissions and try again.";
+          }
         }
-      }
 
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: errorMessage,
-      });
+        toast({
+          variant: "destructive",
+          title: "Camera Access Required",
+          description: errorMessage,
+        });
+        
+        hasAttemptedPermission.current = true;
+      }
     }
   };
 
@@ -104,6 +108,8 @@ export const useMediaStream = () => {
     if (previewVideoRef.current) {
       previewVideoRef.current.srcObject = null;
     }
+    // Reset permission attempt flag when stopping preview
+    hasAttemptedPermission.current = false;
   };
 
   return {

@@ -8,12 +8,27 @@ const Preview = () => {
   const videoUrl = location.state?.videoUrl;
 
   const handleDownload = () => {
-    const a = document.createElement("a");
-    a.href = videoUrl;
-    a.download = "teleprompter-recording.mp4";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    if (!videoUrl) return;
+
+    fetch(videoUrl)
+      .then(response => response.blob())
+      .then(blob => {
+        // Create a new blob with proper MP4 MIME type
+        const mp4Blob = new Blob([blob], { 
+          type: 'video/mp4; codecs="avc1.42E01E, mp4a.40.2"'
+        });
+        const url = window.URL.createObjectURL(mp4Blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "teleprompter-recording.mp4";
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      })
+      .catch(error => {
+        console.error("Error downloading video:", error);
+      });
   };
 
   return (

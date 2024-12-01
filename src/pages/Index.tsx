@@ -222,7 +222,10 @@ const Index = () => {
       };
 
       mediaRecorder.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: "video/mp4" });
+        // Create blob with proper MP4 MIME type and codecs
+        const blob = new Blob(chunksRef.current, { 
+          type: 'video/mp4; codecs="avc1.42E01E, mp4a.40.2"'
+        });
         
         // Clean up PiP video and stop button
         const pipVideo = document.getElementById("pip-video-overlay");

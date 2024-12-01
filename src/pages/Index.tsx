@@ -80,7 +80,7 @@ const Index = () => {
     }
   };
 
-const startRecording = async () => {
+  const startRecording = async () => {
     setIsPreviewing(false);
     try {
       let finalStream: MediaStream;
@@ -94,7 +94,11 @@ const startRecording = async () => {
         });
       } else if (recordingType === "screen") {
         finalStream = await navigator.mediaDevices.getDisplayMedia({ 
-          video: true,
+          video: {
+            displaySurface: 'monitor',
+            logicalSurface: true,
+            cursor: 'always'
+          },
           audio: true
         });
       } else if (recordingType === "both") {
@@ -103,7 +107,11 @@ const startRecording = async () => {
           audio: true 
         });
         const screenStream = await navigator.mediaDevices.getDisplayMedia({ 
-          video: true,
+          video: {
+            displaySurface: 'monitor',
+            logicalSurface: true,
+            cursor: 'always'
+          },
           audio: {
             echoCancellation: true,
             noiseSuppression: true

@@ -17,7 +17,7 @@ const TeleprompterPreview = ({ text, fontSize, speed, isScrolling }: Teleprompte
       let start = 0;
 
       const animateScroll = () => {
-        start -= speed / 10;
+        start -= speed / 50; // Reduced speed factor for smoother scrolling
         if (start <= -scrollHeight) {
           start = 0;
         }
@@ -29,11 +29,9 @@ const TeleprompterPreview = ({ text, fontSize, speed, isScrolling }: Teleprompte
 
       animationFrameRef.current = requestAnimationFrame(animateScroll);
 
-      // Cleanup function to stop animation
       return () => {
         if (animationFrameRef.current) {
           cancelAnimationFrame(animationFrameRef.current);
-          // Reset position when stopping
           if (textRef.current) {
             textRef.current.style.transform = `translateY(0px)`;
           }

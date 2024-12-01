@@ -26,8 +26,7 @@ const TeleprompterPreview = ({ text, fontSize, speed, isScrolling }: Teleprompte
       const totalScrollHeight = container.scrollHeight - scrollContainer.clientHeight;
       
       // Adjusted speed calculation to make it even slower
-      // Now speed of 1 is extremely slow, and 100 is moderately fast
-      const scrollDuration = (totalScrollHeight * (400 - speed * 2)) / 5; // Doubled base duration for slower scrolling
+      const scrollDuration = (totalScrollHeight * (400 - speed * 2)) / 5;
       const startTime = performance.now();
 
       // Animate scroll
@@ -41,7 +40,6 @@ const TeleprompterPreview = ({ text, fontSize, speed, isScrolling }: Teleprompte
         }
       };
 
-      // Start animation
       animationFrameId = requestAnimationFrame(animate);
     } else {
       // Reset scroll position when not scrolling
@@ -65,7 +63,10 @@ const TeleprompterPreview = ({ text, fontSize, speed, isScrolling }: Teleprompte
           lineHeight: '1.5',
           whiteSpace: 'pre-wrap',
           wordBreak: 'break-word',
+          transform: 'scaleX(-1)', // This mirrors the text horizontally
+          direction: 'rtl', // This helps with text alignment when mirrored
         }}
+        className="[&>*]:transform [&>*]:scaleX(-1)" // This ensures any child elements are also properly mirrored
       >
         {text || "Your text will appear here..."}
       </div>

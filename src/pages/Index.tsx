@@ -4,7 +4,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
 import TeleprompterControls from "@/components/TeleprompterControls";
-import RecordingControls from "@/components/RecordingControls";
+import RecordingModal from "@/components/RecordingModal";
 
 const Index = () => {
   const [text, setText] = useState("");
@@ -12,7 +12,7 @@ const Index = () => {
   const [speed, setSpeed] = useState(50);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingType, setRecordingType] = useState<"camera" | "screen" | "both">("both");
-  const [isPreviewMode, setIsPreviewMode] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [previewStream, setPreviewStream] = useState<MediaStream | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const previewVideoRef = useRef<HTMLVideoElement | null>(null);
@@ -28,6 +28,13 @@ const Index = () => {
       }
     };
   }, [previewStream]);
+
+  useEffect(() => {
+    // Start preview when recording type changes in modal
+    if (isModalOpen) {
+      startPreview();
+    }
+  }, [recordingType, isModalOpen]);
 
   const startPreview = async () => {
     try {
@@ -49,11 +56,6 @@ const Index = () => {
         if (previewVideoRef.current) {
           previewVideoRef.current.srcObject = stream;
         }
-        setIsPreviewMode(true);
-        toast({
-          title: "Preview started",
-          description: `Previewing ${recordingType} recording`,
-        });
       }
     } catch (error) {
       toast({
@@ -72,7 +74,6 @@ const Index = () => {
     if (previewVideoRef.current) {
       previewVideoRef.current.srcObject = null;
     }
-    setIsPreviewMode(false);
   };
 
   const startRecording = async () => {
@@ -168,35 +169,30 @@ const Index = () => {
             setSpeed={setSpeed}
           />
 
-          <RecordingControls
-            isRecording={isRecording}
+          <Button
+            onClick={() => setIsModalOpen(true)}
+            variant="outline"
+            className="w-full"
+            disabled={isRecording}
+          >
+            {isRecording ? "Recording in Progress..." : "Open Recording Options"}
+          </Button>
+
+          <RecordingModal
+            isOpen={isModalOpen}
+            onClose={() => {
+              setIsModalOpen(false);
+              stopPreview();
+            }}
             recordingType={recordingType}
             setRecordingType={setRecordingType}
-            onStartRecording={startRecording}
-            onStopRecording={stopRecording}
+            onStartRecording={() => {
+              setIsModalOpen(false);
+              startRecording();
+            }}
+            previewVideoRef={previewVideoRef}
+            isPreviewActive={!!previewStream}
           />
-
-          <div className="flex items-center space-x-4">
-            <Button
-              onClick={isPreviewMode ? stopPreview : startPreview}
-              variant="outline"
-              className="w-full"
-            >
-              {isPreviewMode ? "Stop Preview" : "Start Preview"}
-            </Button>
-          </div>
-
-          {isPreviewMode && (
-            <div className="mt-4 relative aspect-video">
-              <video
-                ref={previewVideoRef}
-                autoPlay
-                playsInline
-                muted
-                className="w-full h-full rounded-lg bg-gray-800"
-              />
-            </div>
-          )}
         </div>
 
         <div 
@@ -209,7 +205,7 @@ const Index = () => {
           <div
             className="animate-scroll"
             style={{
-              animation: text && (isPreviewMode || isRecording) ? `scroll ${100 - speed}s linear infinite` : "none"
+              animation: text && isRecording ? `scroll ${100 - speed}s linear infinite` : "none"
             }}
           >
             {text || "Your text will appear here..."}

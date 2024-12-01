@@ -47,7 +47,7 @@ const Preview = () => {
       setIsConverting(true);
       toast({
         title: "Starting conversion",
-        description: "Please wait while we convert your video to MP4...",
+        description: "Converting video to MP4 (this may take 15-30 seconds)...",
       });
 
       const ffmpeg = new FFmpeg();
@@ -59,11 +59,14 @@ const Preview = () => {
       const inputData = await fetchFile(videoUrl);
       await ffmpeg.writeFile('input.webm', inputData);
 
+      // Optimized conversion settings for faster processing
       await ffmpeg.exec([
         '-i', 'input.webm',
         '-c:v', 'libx264',
-        '-preset', 'fast',
+        '-preset', 'veryfast', // Changed from 'fast' to 'veryfast'
+        '-crf', '23', // Added reasonable compression
         '-c:a', 'aac',
+        '-movflags', '+faststart', // Added for faster playback start
         'output.mp4'
       ]);
 
@@ -81,7 +84,7 @@ const Preview = () => {
 
       toast({
         title: "Conversion complete",
-        description: "Your video has been converted to MP4 format.",
+        description: "Your video has been converted and downloaded as MP4.",
       });
     } catch (error) {
       console.error('Error converting video:', error);

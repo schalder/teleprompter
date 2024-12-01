@@ -50,7 +50,16 @@ const Index = () => {
       let stream: MediaStream | null = null;
 
       if (recordingType === "camera" || recordingType === "both") {
-        stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        stream = await navigator.mediaDevices.getUserMedia({ 
+          video: {
+            width: cameraResolution === "landscape" ? 1920 : 1080,
+            height: cameraResolution === "landscape" ? 1080 : 1920,
+            facingMode: "user",
+            // Add transform to mirror the camera feed
+            transform: "scaleX(-1)"
+          }, 
+          audio: true 
+        });
       } else if (recordingType === "screen") {
         stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
       }
@@ -59,6 +68,8 @@ const Index = () => {
         setPreviewStream(stream);
         if (previewVideoRef.current) {
           previewVideoRef.current.srcObject = stream;
+          // Add CSS transform to mirror the video preview
+          previewVideoRef.current.style.transform = "scaleX(-1)";
         }
       }
     } catch (error) {

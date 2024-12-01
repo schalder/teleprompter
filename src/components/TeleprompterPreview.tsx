@@ -13,12 +13,13 @@ const TeleprompterPreview = ({ text, fontSize, speed, isScrolling }: Teleprompte
   useEffect(() => {
     if (isScrolling && textRef.current) {
       const scrollHeight = textRef.current.scrollHeight;
-      let start = window.innerHeight;
+      // Start with text visible at the top of the screen (0 position)
+      let start = 0;
       const animateScroll = () => {
         // Divide speed by 10 to make the scrolling slower
         start -= speed / 10;
         if (start <= -scrollHeight) {
-          start = window.innerHeight;
+          start = 0;
         }
         if (textRef.current) {
           textRef.current.style.transform = `translateY(${start}px)`;

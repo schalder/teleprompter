@@ -1,12 +1,18 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Download, RotateCcw } from "lucide-react";
+import { Download, RotateCcw, FileVideo } from "lucide-react";
+import { useState } from "react";
+import { useToast } from "@/components/ui/use-toast";
+import { FFmpeg } from '@ffmpeg/ffmpeg';
+import { fetchFile, toBlobURL } from '@ffmpeg/util';
 
 const Preview = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const videoUrl = location.state?.videoUrl;
   const mimeType = location.state?.mimeType;
+  const [isConverting, setIsConverting] = useState(false);
 
   const handleDownload = () => {
     if (!videoUrl) return;
@@ -31,6 +37,61 @@ const Preview = () => {
       });
   };
 
+  const convertToMP4 = async () => {
+    if (!videoUrl) return;
+
+    try {
+      setIsConverting(true);
+      toast({
+        title: "Starting conversion",
+        description: "Please wait while we convert your video to MP4...",
+      });
+
+      const ffmpeg = new FFmpeg();
+      await ffmpeg.load({
+        coreURL: await toBlobURL(`/ffmpeg-core.js`, 'text/javascript'),
+        wasmURL: await toBlobURL(`/ffmpeg-core.wasm`, 'application/wasm'),
+      });
+
+      const inputData = await fetchFile(videoUrl);
+      await ffmpeg.writeFile('input.webm', inputData);
+
+      await ffmpeg.exec([
+        '-i', 'input.webm',
+        '-c:v', 'libx264',
+        '-preset', 'fast',
+        '-c:a', 'aac',
+        'output.mp4'
+      ]);
+
+      const outputData = await ffmpeg.readFile('output.mp4');
+      const outputBlob = new Blob([outputData], { type: 'video/mp4' });
+      const outputUrl = URL.createObjectURL(outputBlob);
+
+      const a = document.createElement('a');
+      a.href = outputUrl;
+      a.download = 'teleprompter-recording.mp4';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(outputUrl);
+
+      toast({
+        title: "Conversion complete",
+        description: "Your video has been converted to MP4 format.",
+      });
+    } catch (error) {
+      console.error('Error converting video:', error);
+      toast({
+        title: "Conversion failed",
+        description: "There was an error converting your video. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsConverting(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-900 text-white p-6">
       <div className="max-w-4xl mx-auto space-y-6">
@@ -44,11 +105,21 @@ const Preview = () => {
               className="w-full rounded-lg"
             />
             
-            <div className="flex space-x-4 justify-center">
+            <div className="flex flex-wrap gap-4 justify-center">
               <Button onClick={handleDownload}>
                 <Download className="w-4 h-4 mr-2" />
-                Download Recording
+                Download Original
               </Button>
+              {mimeType?.includes('webm') && (
+                <Button 
+                  onClick={convertToMP4} 
+                  disabled={isConverting}
+                  variant="secondary"
+                >
+                  <FileVideo className="w-4 h-4 mr-2" />
+                  {isConverting ? 'Converting...' : 'Convert to MP4'}
+                </Button>
+              )}
               <Button variant="outline" onClick={() => navigate("/")} className="text-gray-900">
                 <RotateCcw className="w-4 h-4 mr-2" />
                 Record Again

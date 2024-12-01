@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Camera, Monitor, MonitorSmartphone } from "lucide-react";
+import { Camera, Monitor, MonitorSmartphone, Square } from "lucide-react";
 
 interface RecordingControlsProps {
   isRecording: boolean;
@@ -9,6 +9,8 @@ interface RecordingControlsProps {
   setRecordingType: (type: "camera" | "screen" | "both") => void;
   onStartRecording: () => void;
   onStopRecording: () => void;
+  isPreviewing: boolean;
+  onTogglePreview: () => void;
 }
 
 const RecordingControls = ({
@@ -17,6 +19,8 @@ const RecordingControls = ({
   setRecordingType,
   onStartRecording,
   onStopRecording,
+  isPreviewing,
+  onTogglePreview,
 }: RecordingControlsProps) => {
   return (
     <div className="space-y-4">
@@ -53,13 +57,35 @@ const RecordingControls = ({
         </RadioGroup>
       </div>
 
-      <Button
-        onClick={isRecording ? onStopRecording : onStartRecording}
-        variant={isRecording ? "destructive" : "default"}
-        className="w-full"
-      >
-        {isRecording ? "Stop Recording" : "Start Recording"}
-      </Button>
+      <div className="flex gap-2">
+        {isRecording ? (
+          <Button
+            onClick={onStopRecording}
+            variant="destructive"
+            className="w-full"
+          >
+            <Square className="w-4 h-4 mr-2" />
+            Stop Recording
+          </Button>
+        ) : (
+          <>
+            <Button
+              onClick={onTogglePreview}
+              variant="outline"
+              className="w-full"
+            >
+              {isPreviewing ? "Stop Preview" : "Preview Scroll"}
+            </Button>
+            <Button
+              onClick={onStartRecording}
+              variant="default"
+              className="w-full"
+            >
+              Start Recording
+            </Button>
+          </>
+        )}
+      </div>
     </div>
   );
 };

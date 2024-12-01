@@ -5,12 +5,15 @@ import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
 import TeleprompterControls from "@/components/TeleprompterControls";
 import RecordingModal from "@/components/RecordingModal";
+import TeleprompterPreview from "@/components/TeleprompterPreview";
+import RecordingControls from "@/components/RecordingControls";
 
 const Index = () => {
   const [text, setText] = useState("");
   const [fontSize, setFontSize] = useState(32);
   const [speed, setSpeed] = useState(50);
   const [isRecording, setIsRecording] = useState(false);
+  const [isPreviewing, setIsPreviewing] = useState(false);
   const [recordingType, setRecordingType] = useState<"camera" | "screen" | "both">("both");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [previewStream, setPreviewStream] = useState<MediaStream | null>(null);
@@ -77,6 +80,7 @@ const Index = () => {
   };
 
   const startRecording = async () => {
+    setIsPreviewing(false); // Stop preview when recording starts
     try {
       let finalStream: MediaStream;
 
@@ -149,6 +153,10 @@ const Index = () => {
     }
   };
 
+  const togglePreview = () => {
+    setIsPreviewing(!isPreviewing);
+  };
+
   return (
     <div className="min-h-screen bg-gray-900 text-white p-6">
       <div className="max-w-4xl mx-auto space-y-6">
@@ -169,14 +177,22 @@ const Index = () => {
             setSpeed={setSpeed}
           />
 
-          <Button
-            onClick={() => setIsModalOpen(true)}
-            variant="outline"
-            className="w-full"
-            disabled={isRecording}
-          >
-            {isRecording ? "Recording in Progress..." : "Open Recording Options"}
-          </Button>
+          <RecordingControls
+            isRecording={isRecording}
+            recordingType={recordingType}
+            setRecordingType={setRecordingType}
+            onStartRecording={() => setIsModalOpen(true)}
+            onStopRecording={stopRecording}
+            isPreviewing={isPreviewing}
+            onTogglePreview={togglePreview}
+          />
+
+          <TeleprompterPreview
+            text={text}
+            fontSize={fontSize}
+            speed={speed}
+            isScrolling={isPreviewing || isRecording}
+          />
 
           <RecordingModal
             isOpen={isModalOpen}
@@ -193,23 +209,6 @@ const Index = () => {
             previewVideoRef={previewVideoRef}
             isPreviewActive={!!previewStream}
           />
-        </div>
-
-        <div 
-          className="mt-8 p-6 bg-gray-800 rounded-lg overflow-y-auto max-h-[400px]"
-          style={{
-            fontSize: `${fontSize}px`,
-            transition: "font-size 0.3s ease"
-          }}
-        >
-          <div
-            className="animate-scroll"
-            style={{
-              animation: text && isRecording ? `scroll ${100 - speed}s linear infinite` : "none"
-            }}
-          >
-            {text || "Your text will appear here..."}
-          </div>
         </div>
       </div>
     </div>

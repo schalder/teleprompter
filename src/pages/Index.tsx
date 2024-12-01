@@ -88,28 +88,26 @@ const Index = () => {
       let stopButton: HTMLButtonElement | null = null;
 
       if (recordingType === "camera") {
-        finalStream = await navigator.mediaDevices.getUserMedia({ 
-          video: true, 
-          audio: true 
+        finalStream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: true
         });
       } else if (recordingType === "screen") {
-        finalStream = await navigator.mediaDevices.getDisplayMedia({ 
+        finalStream = await navigator.mediaDevices.getDisplayMedia({
           video: {
             displaySurface: 'monitor',
-            logicalSurface: true,
             cursor: 'always'
           },
           audio: true
         });
       } else if (recordingType === "both") {
-        const cameraStream = await navigator.mediaDevices.getUserMedia({ 
-          video: true, 
-          audio: true 
+        const cameraStream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: true
         });
-        const screenStream = await navigator.mediaDevices.getDisplayMedia({ 
+        const screenStream = await navigator.mediaDevices.getDisplayMedia({
           video: {
             displaySurface: 'monitor',
-            logicalSurface: true,
             cursor: 'always'
           },
           audio: {

@@ -15,7 +15,8 @@ const TeleprompterPreview = ({ text, fontSize, speed, isScrolling }: Teleprompte
       const scrollHeight = textRef.current.scrollHeight;
       let start = window.innerHeight;
       const animateScroll = () => {
-        start -= speed;
+        // Divide speed by 10 to make the scrolling slower
+        start -= speed / 10;
         if (start <= -scrollHeight) {
           start = window.innerHeight;
         }

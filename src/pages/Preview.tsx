@@ -51,34 +51,45 @@ const Preview = () => {
       });
 
       const ffmpeg = new FFmpeg();
+      console.log("FFmpeg instance created");
 
-      // Load FFmpeg
       await ffmpeg.load({
         coreURL: await toBlobURL(`/ffmpeg-core.js`, 'text/javascript'),
         wasmURL: await toBlobURL(`/ffmpeg-core.wasm`, 'application/wasm'),
       });
+      console.log("FFmpeg loaded");
 
       const inputData = await fetchFile(videoUrl);
+      console.log("Input file fetched");
+      
       await ffmpeg.writeFile('input.webm', inputData);
+      console.log("Input file written");
 
-      // Extremely optimized conversion settings for speed
+      // Super aggressive optimization settings
       await ffmpeg.exec([
         '-i', 'input.webm',
         '-c:v', 'libx264',
         '-preset', 'ultrafast',
-        '-tune', 'fastdecode',
-        '-crf', '30',
-        '-maxrate', '2M',
-        '-bufsize', '4M',
+        '-tune', 'zerolatency',
+        '-profile:v', 'baseline',
+        '-level', '3.0',
+        '-crf', '35',
+        '-maxrate', '1M',
+        '-bufsize', '2M',
+        '-pix_fmt', 'yuv420p',
         '-c:a', 'aac',
-        '-b:a', '96k',
-        '-ac', '2',
+        '-b:a', '64k',
+        '-ac', '1',
         '-ar', '44100',
+        '-f', 'mp4',
         '-movflags', '+faststart',
         'output.mp4'
       ]);
+      console.log("Conversion command executed");
 
       const outputData = await ffmpeg.readFile('output.mp4');
+      console.log("Output file read");
+
       const outputBlob = new Blob([outputData], { type: 'video/mp4' });
       const outputUrl = URL.createObjectURL(outputBlob);
 

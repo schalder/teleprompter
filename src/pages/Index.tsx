@@ -95,8 +95,7 @@ const Index = () => {
       } else if (recordingType === "screen") {
         finalStream = await navigator.mediaDevices.getDisplayMedia({
           video: {
-            displaySurface: 'monitor',
-            cursor: 'always'
+            displaySurface: 'monitor'
           },
           audio: true
         });
@@ -107,8 +106,7 @@ const Index = () => {
         });
         const screenStream = await navigator.mediaDevices.getDisplayMedia({
           video: {
-            displaySurface: 'monitor',
-            cursor: 'always'
+            displaySurface: 'monitor'
           },
           audio: {
             echoCancellation: true,

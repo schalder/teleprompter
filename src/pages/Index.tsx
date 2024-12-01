@@ -126,7 +126,7 @@ const Index = () => {
         stopButton.setAttribute("id", "floating-stop-button");
         stopButton.textContent = "Stop Recording";
         
-        // Styles for PiP video
+        // Enhanced styles for PiP video to ensure it stays on top across all windows
         const pipStyles = {
           position: "fixed",
           bottom: "20px",
@@ -139,12 +139,13 @@ const Index = () => {
           border: "3px solid white",
           boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
           backgroundColor: "black",
-          transform: "translateZ(0)",
+          transform: "translate3d(0,0,0)",
           willChange: "transform",
-          pointerEvents: "none"
+          pointerEvents: "none",
+          isolation: "isolate"
         };
 
-        // Styles for stop button
+        // Enhanced styles for stop button to ensure visibility across windows
         const stopButtonStyles = {
           position: "fixed",
           top: "20px",
@@ -158,8 +159,10 @@ const Index = () => {
           fontWeight: "bold",
           zIndex: "2147483647",
           boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
-          transform: "translateZ(0)",
-          willChange: "transform"
+          transform: "translate3d(0,0,0)",
+          willChange: "transform",
+          position: "fixed",
+          isolation: "isolate"
         };
 
         // Apply styles

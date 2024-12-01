@@ -199,10 +199,19 @@ const Index = () => {
       }
 
       const options = {
-        mimeType: 'video/webm;codecs=h264,opus',
+        mimeType: 'video/mp4;codecs=avc1.42E01E,mp4a.40.2',
         videoBitsPerSecond: 2500000, // 2.5 Mbps
         audioBitsPerSecond: 128000   // 128 kbps
       };
+      
+      // Fallback if MP4 is not supported
+      if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+        options.mimeType = 'video/webm;codecs=h264,opus';
+        toast({
+          title: "Notice",
+          description: "MP4 recording not supported by your browser. Falling back to WebM format.",
+        });
+      }
       
       const mediaRecorder = new MediaRecorder(finalStream, options);
       mediaRecorderRef.current = mediaRecorder;

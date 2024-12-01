@@ -13,10 +13,12 @@ const Preview = () => {
     fetch(videoUrl)
       .then(response => response.blob())
       .then(blob => {
+        // Determine the file extension based on the blob type
+        const fileExtension = blob.type.includes('mp4') ? 'mp4' : 'webm';
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = "teleprompter-recording.webm"; // Changed extension to .webm
+        a.download = `teleprompter-recording.${fileExtension}`;
         document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);

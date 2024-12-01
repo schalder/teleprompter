@@ -11,17 +11,32 @@ const TeleprompterPreview = ({ text, fontSize, speed, isScrolling }: Teleprompte
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (containerRef.current && isScrolling) {
-      const scrollHeight = containerRef.current.scrollHeight;
-      const duration = (scrollHeight * (100 - speed)) / 50;
-      
-      containerRef.current.style.transition = `transform ${duration}s linear`;
-      containerRef.current.style.transform = `translateY(-${scrollHeight}px)`;
-    } else if (containerRef.current) {
-      containerRef.current.style.transition = 'none';
-      containerRef.current.style.transform = 'translateY(0)';
+    const container = containerRef.current;
+    if (!container) return;
+
+    // Reset position when text changes or scrolling stops
+    if (!isScrolling) {
+      container.style.transition = 'none';
+      container.style.transform = 'translateY(0)';
+      return;
     }
-  }, [isScrolling, speed, text]); // Added text dependency to reset scroll when text changes
+
+    // Calculate scroll duration based on content height and speed
+    const scrollHeight = container.scrollHeight - container.clientHeight;
+    const duration = (scrollHeight * (100 - speed)) / 50;
+
+    // Start scrolling animation
+    requestAnimationFrame(() => {
+      container.style.transition = `transform ${duration}s linear`;
+      container.style.transform = `translateY(-${scrollHeight}px)`;
+    });
+
+    // Cleanup function
+    return () => {
+      container.style.transition = 'none';
+      container.style.transform = 'translateY(0)';
+    };
+  }, [isScrolling, speed, text]); // Dependencies to reset scroll
 
   return (
     <div className="mt-8 p-6 bg-gray-800 rounded-lg overflow-hidden h-[400px] relative">

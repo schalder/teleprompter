@@ -13,6 +13,7 @@ const Index = () => {
   const [speed, setSpeed] = useState(50);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingType, setRecordingType] = useState<"camera" | "screen" | "both">("both");
+  const [isPreviewMode, setIsPreviewMode] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -20,12 +21,13 @@ const Index = () => {
 
   const startRecording = async () => {
     try {
-      const mediaStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       let finalStream: MediaStream;
 
-      if (recordingType === "screen" || recordingType === "both") {
-        const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+      if (recordingType === "camera" || recordingType === "both") {
+        const mediaStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        
         if (recordingType === "both") {
+          const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
           const [screenTrack] = screenStream.getVideoTracks();
           const [cameraTrack] = mediaStream.getVideoTracks();
           const [audioTrack] = mediaStream.getAudioTracks();
@@ -34,14 +36,15 @@ const Index = () => {
           // Create PiP video element for camera
           const pipVideo = document.createElement("video");
           pipVideo.srcObject = new MediaStream([cameraTrack]);
-          pipVideo.classList.add("fixed", "bottom-4", "right-4", "rounded-full", "w-32", "h-32", "object-cover");
+          pipVideo.classList.add("fixed", "bottom-4", "right-4", "rounded-full", "w-32", "h-32", "object-cover", "z-50");
           pipVideo.autoplay = true;
           document.body.appendChild(pipVideo);
         } else {
-          finalStream = screenStream;
+          finalStream = mediaStream;
         }
       } else {
-        finalStream = mediaStream;
+        // Screen only
+        finalStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
       }
 
       const mediaRecorder = new MediaRecorder(finalStream);
@@ -106,6 +109,16 @@ const Index = () => {
             setSpeed={setSpeed}
           />
           
+          <div className="flex items-center space-x-4">
+            <Button
+              onClick={() => setIsPreviewMode(!isPreviewMode)}
+              variant="outline"
+              className="w-full"
+            >
+              {isPreviewMode ? "Stop Preview" : "Start Preview"}
+            </Button>
+          </div>
+
           <RecordingControls
             isRecording={isRecording}
             recordingType={recordingType}
@@ -125,7 +138,7 @@ const Index = () => {
           <div
             className="animate-scroll"
             style={{
-              animation: text && !isRecording ? `scroll ${100 - speed}s linear infinite` : "none"
+              animation: text && (isPreviewMode || isRecording) ? `scroll ${100 - speed}s linear infinite` : "none"
             }}
           >
             {text || "Your text will appear here..."}

@@ -277,17 +277,19 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-gray-900 text-white p-6">
-      <div className="max-w-4xl mx-auto space-y-6">
+      <div className="max-w-4xl mx-auto space-y-8">
         <h1 className="text-3xl font-bold text-center mb-8">Teleprompter</h1>
         
-        <div className="space-y-4">
-          <Textarea
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            placeholder="Enter your script here..."
-            className="h-40 bg-gray-800 border-gray-700"
-          />
-          
+        {/* Teleprompter Preview moved to top */}
+        <TeleprompterPreview
+          text={text}
+          fontSize={fontSize}
+          speed={speed}
+          isScrolling={isPreviewing || isRecording}
+        />
+        
+        {/* Controls section */}
+        <div className="space-y-6 bg-gray-800 p-6 rounded-lg">
           <TeleprompterControls
             fontSize={fontSize}
             setFontSize={setFontSize}
@@ -303,17 +305,42 @@ const Index = () => {
                 onValueChange={(value: "landscape" | "portrait") => setCameraResolution(value)}
                 className="flex space-x-4"
               >
-                <div className="flex items-center space-x-2 cursor-pointer hover:bg-gray-800 p-2 rounded-lg transition-colors">
+                <div 
+                  className="flex items-center space-x-2 cursor-pointer hover:bg-gray-700 p-3 rounded-lg transition-colors border border-gray-600"
+                  onClick={() => setCameraResolution("landscape")}
+                >
                   <RadioGroupItem value="landscape" id="landscape" className="cursor-pointer" />
                   <Label htmlFor="landscape" className="cursor-pointer hover:text-primary">1920x1080 (Landscape)</Label>
                 </div>
-                <div className="flex items-center space-x-2 cursor-pointer hover:bg-gray-800 p-2 rounded-lg transition-colors">
+                <div 
+                  className="flex items-center space-x-2 cursor-pointer hover:bg-gray-700 p-3 rounded-lg transition-colors border border-gray-600"
+                  onClick={() => setCameraResolution("portrait")}
+                >
                   <RadioGroupItem value="portrait" id="portrait" className="cursor-pointer" />
                   <Label htmlFor="portrait" className="cursor-pointer hover:text-primary">1080x1920 (Portrait)</Label>
                 </div>
               </RadioGroup>
             </div>
           )}
+
+          <div className="space-y-2">
+            <Label className="text-lg font-medium">Recording Type</Label>
+            <div className="grid grid-cols-3 gap-4">
+              {["camera", "screen", "both"].map((type) => (
+                <button
+                  key={type}
+                  onClick={() => setRecordingType(type as "camera" | "screen" | "both")}
+                  className={`p-4 rounded-lg border transition-all ${
+                    recordingType === type
+                      ? "bg-primary border-primary text-primary-foreground"
+                      : "border-gray-600 hover:bg-gray-700"
+                  }`}
+                >
+                  <span className="capitalize">{type}</span>
+                </button>
+              ))}
+            </div>
+          </div>
 
           <RecordingControls
             isRecording={isRecording}
@@ -324,30 +351,31 @@ const Index = () => {
             isPreviewing={isPreviewing}
             onTogglePreview={togglePreview}
           />
-
-          <TeleprompterPreview
-            text={text}
-            fontSize={fontSize}
-            speed={speed}
-            isScrolling={isPreviewing || isRecording}
-          />
-
-          <RecordingModal
-            isOpen={isModalOpen}
-            onClose={() => {
-              setIsModalOpen(false);
-              stopPreview();
-            }}
-            recordingType={recordingType}
-            setRecordingType={setRecordingType}
-            onStartRecording={() => {
-              setIsModalOpen(false);
-              startRecording();
-            }}
-            previewVideoRef={previewVideoRef}
-            isPreviewActive={!!previewStream}
-          />
         </div>
+
+        {/* Text input moved to bottom */}
+        <Textarea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder="Enter your script here..."
+          className="h-40 bg-gray-800 border-gray-700"
+        />
+
+        <RecordingModal
+          isOpen={isModalOpen}
+          onClose={() => {
+            setIsModalOpen(false);
+            stopPreview();
+          }}
+          recordingType={recordingType}
+          setRecordingType={setRecordingType}
+          onStartRecording={() => {
+            setIsModalOpen(false);
+            startRecording();
+          }}
+          previewVideoRef={previewVideoRef}
+          isPreviewActive={!!previewStream}
+        />
       </div>
     </div>
   );

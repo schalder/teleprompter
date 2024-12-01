@@ -47,18 +47,12 @@ const Preview = () => {
       setIsConverting(true);
       toast({
         title: "Starting conversion",
-        description: "Converting video to MP4 (typically under 60 seconds)...",
+        description: "Converting video to MP4 (typically under 30 seconds)...",
       });
 
       const ffmpeg = new FFmpeg();
-      
-      // Set a timeout of 2 minutes
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => {
-          reject(new Error('Conversion timed out'));
-        }, 120000); // 2 minutes timeout
-      });
 
+      // Load FFmpeg
       await ffmpeg.load({
         coreURL: await toBlobURL(`/ffmpeg-core.js`, 'text/javascript'),
         wasmURL: await toBlobURL(`/ffmpeg-core.wasm`, 'application/wasm'),
@@ -67,20 +61,22 @@ const Preview = () => {
       const inputData = await fetchFile(videoUrl);
       await ffmpeg.writeFile('input.webm', inputData);
 
-      // Further optimized conversion settings
-      const conversionPromise = ffmpeg.exec([
+      // Extremely optimized conversion settings for speed
+      await ffmpeg.exec([
         '-i', 'input.webm',
         '-c:v', 'libx264',
-        '-preset', 'ultrafast', // Changed to ultrafast for maximum speed
-        '-crf', '28', // Slightly reduced quality for faster conversion
+        '-preset', 'ultrafast',
+        '-tune', 'fastdecode',
+        '-crf', '30',
+        '-maxrate', '2M',
+        '-bufsize', '4M',
         '-c:a', 'aac',
-        '-b:a', '128k', // Reduced audio bitrate
+        '-b:a', '96k',
+        '-ac', '2',
+        '-ar', '44100',
         '-movflags', '+faststart',
         'output.mp4'
       ]);
-
-      // Race between conversion and timeout
-      await Promise.race([conversionPromise, timeoutPromise]);
 
       const outputData = await ffmpeg.readFile('output.mp4');
       const outputBlob = new Blob([outputData], { type: 'video/mp4' });
@@ -102,9 +98,7 @@ const Preview = () => {
       console.error('Error converting video:', error);
       toast({
         title: "Conversion failed",
-        description: error.message === 'Conversion timed out' 
-          ? "The conversion took too long. Please try again with a shorter video."
-          : "There was an error converting your video. Please try again.",
+        description: "There was an error converting your video. Please try with reduced quality settings.",
         variant: "destructive",
       });
     } finally {

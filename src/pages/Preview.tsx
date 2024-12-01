@@ -71,9 +71,9 @@ const Preview = () => {
               </Button>
 
               <Button 
-                variant="outline" 
+                variant="secondary" 
                 onClick={() => navigate("/")}
-                className="w-full sm:w-auto text-white hover:bg-gray-700"
+                className="w-full sm:w-auto bg-gray-700 hover:bg-gray-600 text-white"
               >
                 <RotateCcw className="w-4 h-4 mr-2" />
                 Record Again

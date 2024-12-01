@@ -1,12 +1,12 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { useNavigate } from "react-router-dom";
-import { useToast } from "@/components/ui/use-toast";
 import TeleprompterControls from "@/components/TeleprompterControls";
 import RecordingModal from "@/components/RecordingModal";
 import TeleprompterPreview from "@/components/TeleprompterPreview";
 import RecordingControls from "@/components/RecordingControls";
+import { useMediaStream } from "@/hooks/useMediaStream";
+import { useRecording } from "@/hooks/useRecording";
 
 const Index = () => {
   const [text, setText] = useState("");
@@ -17,64 +17,24 @@ const Index = () => {
   const [recordingType, setRecordingType] = useState<"camera" | "screen">("camera");
   const [cameraResolution, setCameraResolution] = useState<"landscape" | "portrait">("landscape");
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [previewStream, setPreviewStream] = useState<MediaStream | null>(null);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const previewVideoRef = useRef<HTMLVideoElement | null>(null);
-  const handleVisibilityChangeRef = useRef<(() => void) | null>(null);
-  const navigate = useNavigate();
-  const { toast } = useToast();
-  const chunksRef = useRef<Blob[]>([]);
 
-  useEffect(() => {
-    return () => {
-      if (previewStream) {
-        previewStream.getTracks().forEach(track => track.stop());
-      }
-    };
-  }, [previewStream]);
+  const { 
+    previewStream, 
+    previewVideoRef, 
+    startPreview, 
+    stopPreview 
+  } = useMediaStream();
+
+  const { 
+    startRecording, 
+    stopRecording 
+  } = useRecording();
 
   useEffect(() => {
     if (isModalOpen) {
-      startPreview();
+      startPreview(recordingType, cameraResolution);
     }
-  }, [recordingType, isModalOpen]);
-
-  const startPreview = async () => {
-    try {
-      if (previewStream) {
-        previewStream.getTracks().forEach(track => track.stop());
-      }
-
-      let stream: MediaStream | null = null;
-
-      if (recordingType === "camera") {
-        stream = await navigator.mediaDevices.getUserMedia({ 
-          video: {
-            width: cameraResolution === "landscape" ? 1920 : 1080,
-            height: cameraResolution === "landscape" ? 1080 : 1920,
-            facingMode: "user"
-          }, 
-          audio: true 
-        });
-      } else if (recordingType === "screen") {
-        stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-      }
-
-      if (stream) {
-        setPreviewStream(stream);
-        if (previewVideoRef.current) {
-          previewVideoRef.current.srcObject = stream;
-          previewVideoRef.current.style.transform = "scaleX(-1)";
-        }
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to start preview. Please check your permissions.",
-        variant: "destructive",
-      });
-    }
-  };
+  }, [recordingType, isModalOpen, cameraResolution]);
 
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -85,101 +45,18 @@ const Index = () => {
     setIsPreviewing(!isPreviewing);
   };
 
-  const startRecording = async () => {
+  const handleStartRecording = async () => {
     scrollToTop();
-    try {
-      let finalStream: MediaStream;
-
-      const getVideoConstraints = (isPortrait: boolean) => ({
-        width: { ideal: isPortrait ? 1080 : 1920 },
-        height: { ideal: isPortrait ? 1920 : 1080 },
-        frameRate: { ideal: 30 }
-      });
-
-      const audioConstraints = {
-        echoCancellation: true,
-        noiseSuppression: true,
-        sampleRate: 48000,
-        channelCount: 2
-      };
-
-      const isPortraitMode = cameraResolution === "portrait";
-      const videoConstraints = getVideoConstraints(isPortraitMode);
-
-      if (recordingType === "camera") {
-        const constraints = {
-          video: videoConstraints,
-          audio: audioConstraints
-        };
-        finalStream = await navigator.mediaDevices.getUserMedia(constraints);
-      } else {
-        finalStream = await navigator.mediaDevices.getDisplayMedia({
-          video: {
-            ...videoConstraints,
-            displaySurface: 'monitor'
-          },
-          audio: audioConstraints
-        });
-      }
-
-      const options = {
-        mimeType: 'video/webm;codecs=h264,opus',
-        videoBitsPerSecond: 8000000,
-        audioBitsPerSecond: 128000
-      };
-      
-      if (!MediaRecorder.isTypeSupported(options.mimeType)) {
-        options.mimeType = 'video/mp4;codecs=avc1.42E01E,mp4a.40.2';
-      }
-      
-      const mediaRecorder = new MediaRecorder(finalStream, options);
-      mediaRecorderRef.current = mediaRecorder;
-      chunksRef.current = [];
-
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          chunksRef.current.push(event.data);
-        }
-      };
-
-      mediaRecorder.onstop = () => {
-        const blob = new Blob(chunksRef.current, { 
-          type: mediaRecorder.mimeType || 'video/mp4' 
-        });
-        
-        navigate("/preview", { state: { videoUrl: URL.createObjectURL(blob), mimeType: mediaRecorder.mimeType } });
-      };
-
-      stopPreview();
-      mediaRecorder.start(1000);
+    const success = await startRecording(recordingType, cameraResolution);
+    if (success) {
       setIsRecording(true);
-      toast({
-        title: "Recording started",
-        description: "Click Stop when you're done recording.",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to start recording. Please check your permissions.",
-        variant: "destructive",
-      });
+      setIsModalOpen(false);
     }
   };
 
-  const stopRecording = () => {
-    if (mediaRecorderRef.current) {
-      mediaRecorderRef.current.stop();
+  const handleStopRecording = () => {
+    if (stopRecording()) {
       setIsRecording(false);
-    }
-  };
-
-  const stopPreview = () => {
-    if (previewStream) {
-      previewStream.getTracks().forEach(track => track.stop());
-      setPreviewStream(null);
-    }
-    if (previewVideoRef.current) {
-      previewVideoRef.current.srcObject = null;
     }
   };
 
@@ -206,7 +83,7 @@ const Index = () => {
           <RecordingControls
             isRecording={isRecording}
             onStartRecording={() => setIsModalOpen(true)}
-            onStopRecording={stopRecording}
+            onStopRecording={handleStopRecording}
             isPreviewing={isPreviewing}
             onTogglePreview={togglePreview}
           />
@@ -227,10 +104,7 @@ const Index = () => {
           }}
           recordingType={recordingType}
           setRecordingType={setRecordingType}
-          onStartRecording={() => {
-            setIsModalOpen(false);
-            startRecording();
-          }}
+          onStartRecording={handleStartRecording}
           previewVideoRef={previewVideoRef}
           isPreviewActive={!!previewStream}
           cameraResolution={cameraResolution}

@@ -61,18 +61,20 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-6">
-      <div className="max-w-4xl mx-auto space-y-8">
-        <h1 className="text-3xl font-bold text-center mb-8">Teleprompter</h1>
+    <div className="min-h-screen bg-gray-900 text-white p-4 sm:p-6">
+      <div className="max-w-4xl mx-auto space-y-6">
+        <h1 className="text-2xl sm:text-3xl font-bold text-center mb-6">Teleprompter</h1>
         
-        <TeleprompterPreview
-          text={text}
-          fontSize={fontSize}
-          speed={speed}
-          isScrolling={isPreviewing || isRecording}
-        />
+        <div className="relative w-full overflow-hidden rounded-lg bg-gray-800">
+          <TeleprompterPreview
+            text={text}
+            fontSize={fontSize}
+            speed={speed}
+            isScrolling={isPreviewing || isRecording}
+          />
+        </div>
         
-        <div className="space-y-6 bg-gray-800 p-6 rounded-lg">
+        <div className="space-y-4 bg-gray-800 p-4 sm:p-6 rounded-lg">
           <TeleprompterControls
             fontSize={fontSize}
             setFontSize={setFontSize}
@@ -93,7 +95,7 @@ const Index = () => {
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder="Enter your script here..."
-          className="h-40 bg-gray-800 border-gray-700"
+          className="h-40 bg-gray-800 border-gray-700 text-base sm:text-lg"
         />
 
         <RecordingModal

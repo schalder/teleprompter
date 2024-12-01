@@ -18,14 +18,14 @@ const RecordingControls = ({
 }: RecordingControlsProps) => {
   return (
     <div className="space-y-4">
-      <div className="flex gap-2">
+      <div className="flex flex-col sm:flex-row gap-3">
         {isRecording ? (
           <Button
             onClick={onStopRecording}
             variant="destructive"
-            className="w-full"
+            className="w-full py-6 text-lg"
           >
-            <Square className="w-4 h-4 mr-2" />
+            <Square className="w-5 h-5 mr-2" />
             Stop Recording
           </Button>
         ) : (
@@ -33,14 +33,14 @@ const RecordingControls = ({
             <Button
               onClick={onTogglePreview}
               variant="outline"
-              className="w-full text-gray-700 hover:text-gray-900"
+              className="w-full py-6 text-lg text-gray-300 hover:text-white"
             >
               {isPreviewing ? "Stop Preview" : "Preview Scroll"}
             </Button>
             <Button
               onClick={onStartRecording}
               variant="default"
-              className="w-full"
+              className="w-full py-6 text-lg"
             >
               Start Recording
             </Button>

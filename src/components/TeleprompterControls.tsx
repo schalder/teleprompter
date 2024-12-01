@@ -15,28 +15,28 @@ const TeleprompterControls = ({
   setSpeed,
 }: TeleprompterControlsProps) => {
   return (
-    <div className="space-y-4">
-      <div className="space-y-2">
-        <Label>Font Size: {fontSize}px</Label>
+    <div className="space-y-6">
+      <div className="space-y-3">
+        <Label className="text-base sm:text-lg">Font Size: {fontSize}px</Label>
         <Slider
           value={[fontSize]}
           onValueChange={(value) => setFontSize(value[0])}
           min={16}
           max={72}
           step={1}
-          className="w-full"
+          className="w-full touch-none"
         />
       </div>
 
-      <div className="space-y-2">
-        <Label>Scroll Speed: {speed}%</Label>
+      <div className="space-y-3">
+        <Label className="text-base sm:text-lg">Scroll Speed: {speed}%</Label>
         <Slider
           value={[speed]}
           onValueChange={(value) => setSpeed(value[0])}
           min={1}
           max={20}
           step={1}
-          className="w-full"
+          className="w-full touch-none"
         />
       </div>
     </div>

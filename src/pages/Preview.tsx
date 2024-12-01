@@ -37,20 +37,26 @@ const Preview = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-6">
+    <div className="min-h-screen bg-gray-900 text-white p-4 sm:p-6">
       <div className="max-w-4xl mx-auto space-y-6">
-        <h1 className="text-3xl font-bold text-center mb-8">Preview Recording</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-center mb-6">Preview Recording</h1>
         
         {videoUrl ? (
           <div className="space-y-6">
-            <video
-              src={videoUrl}
-              controls
-              className="w-full rounded-lg"
-            />
+            <div className="relative w-full rounded-lg overflow-hidden bg-gray-800">
+              <video
+                src={videoUrl}
+                controls
+                className="w-full h-auto"
+                playsInline
+              />
+            </div>
             
-            <div className="flex flex-wrap gap-4 justify-center">
-              <Button onClick={handleDownload}>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Button 
+                onClick={handleDownload}
+                className="w-full sm:w-auto"
+              >
                 <Download className="w-4 h-4 mr-2" />
                 Download Recording
               </Button>
@@ -58,21 +64,26 @@ const Preview = () => {
               <Button 
                 variant="secondary"
                 onClick={() => window.open('https://cloudconvert.com/webm-to-mp4', '_blank')}
+                className="w-full sm:w-auto"
               >
                 <ExternalLink className="w-4 h-4 mr-2" />
                 Convert to MP4 (External)
               </Button>
 
-              <Button variant="outline" onClick={() => navigate("/")} className="text-gray-900">
+              <Button 
+                variant="outline" 
+                onClick={() => navigate("/")}
+                className="w-full sm:w-auto text-white"
+              >
                 <RotateCcw className="w-4 h-4 mr-2" />
                 Record Again
               </Button>
             </div>
           </div>
         ) : (
-          <div className="text-center">
-            <p>No recording found. Please go back and record first.</p>
-            <Button className="mt-4" onClick={() => navigate("/")}>
+          <div className="text-center p-4">
+            <p className="mb-4">No recording found. Please go back and record first.</p>
+            <Button onClick={() => navigate("/")}>
               Go Back
             </Button>
           </div>

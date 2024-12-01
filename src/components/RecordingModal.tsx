@@ -104,12 +104,12 @@ const RecordingModal = ({
                     <div className="space-y-2">
                       <Label className="text-lg font-medium">Select Camera</Label>
                       <Select value={selectedVideoDevice} onValueChange={setSelectedVideoDevice}>
-                        <SelectTrigger className="w-full bg-gray-800 border-gray-700">
-                          <SelectValue placeholder="Select a camera" />
+                        <SelectTrigger className="w-full bg-gray-800 border-gray-700 text-white">
+                          <SelectValue placeholder="Select a camera" className="text-gray-300" />
                         </SelectTrigger>
                         <SelectContent className="bg-gray-800 border-gray-700">
                           {videoDevices.map((device) => (
-                            <SelectItem key={device.deviceId} value={device.deviceId}>
+                            <SelectItem key={device.deviceId} value={device.deviceId} className="text-white hover:bg-gray-700">
                               {device.label || `Camera ${videoDevices.indexOf(device) + 1}`}
                             </SelectItem>
                           ))}
@@ -120,12 +120,12 @@ const RecordingModal = ({
                     <div className="space-y-2">
                       <Label className="text-lg font-medium">Select Microphone</Label>
                       <Select value={selectedAudioDevice} onValueChange={setSelectedAudioDevice}>
-                        <SelectTrigger className="w-full bg-gray-800 border-gray-700">
-                          <SelectValue placeholder="Select a microphone" />
+                        <SelectTrigger className="w-full bg-gray-800 border-gray-700 text-white">
+                          <SelectValue placeholder="Select a microphone" className="text-gray-300" />
                         </SelectTrigger>
                         <SelectContent className="bg-gray-800 border-gray-700">
                           {audioDevices.map((device) => (
-                            <SelectItem key={device.deviceId} value={device.deviceId}>
+                            <SelectItem key={device.deviceId} value={device.deviceId} className="text-white hover:bg-gray-700">
                               {device.label || `Microphone ${audioDevices.indexOf(device) + 1}`}
                             </SelectItem>
                           ))}

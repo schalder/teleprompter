@@ -14,40 +14,55 @@ const TeleprompterPreview = ({ text, fontSize, speed, isScrolling }: Teleprompte
     const container = containerRef.current;
     if (!container) return;
 
-    // Reset position when text changes or scrolling stops
-    if (!isScrolling) {
-      container.style.transition = 'none';
+    let animationFrameId: number;
+
+    if (isScrolling) {
+      // Reset position first
       container.style.transform = 'translateY(0)';
-      return;
+      
+      // Calculate total scroll distance and duration
+      const scrollHeight = container.scrollHeight - container.clientHeight;
+      const duration = (scrollHeight * (100 - speed)) / 25; // Adjusted speed factor
+      const startTime = performance.now();
+
+      // Animate scroll
+      const animate = (currentTime: number) => {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / (duration * 1000), 1);
+        
+        const currentScroll = progress * scrollHeight;
+        container.style.transform = `translateY(-${currentScroll}px)`;
+
+        if (progress < 1) {
+          animationFrameId = requestAnimationFrame(animate);
+        }
+      };
+
+      animationFrameId = requestAnimationFrame(animate);
+    } else {
+      // Reset position when not scrolling
+      container.style.transform = 'translateY(0)';
     }
 
-    // Calculate scroll duration based on content height and speed
-    const scrollHeight = container.scrollHeight - container.clientHeight;
-    const duration = (scrollHeight * (100 - speed)) / 50;
-
-    // Start scrolling animation
-    requestAnimationFrame(() => {
-      container.style.transition = `transform ${duration}s linear`;
-      container.style.transform = `translateY(-${scrollHeight}px)`;
-    });
-
-    // Cleanup function
+    // Cleanup
     return () => {
-      container.style.transition = 'none';
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+      }
       container.style.transform = 'translateY(0)';
     };
-  }, [isScrolling, speed, text]); // Dependencies to reset scroll
+  }, [isScrolling, speed, text]);
 
   return (
     <div className="mt-8 p-6 bg-gray-800 rounded-lg overflow-hidden h-[400px] relative">
       <div
         ref={containerRef}
-        className="transition-transform"
         style={{
           fontSize: `${fontSize}px`,
           lineHeight: '1.5',
           whiteSpace: 'pre-wrap',
-          wordBreak: 'break-word'
+          wordBreak: 'break-word',
+          transition: 'none', // Remove CSS transition to use RAF
         }}
       >
         {text || "Your text will appear here..."}

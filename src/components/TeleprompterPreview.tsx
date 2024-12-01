@@ -17,7 +17,7 @@ const TeleprompterPreview = ({ text, fontSize, speed, isScrolling }: Teleprompte
       let start = 0;
 
       const animateScroll = () => {
-        start -= speed / 50; // Reduced speed factor for smoother scrolling
+        start -= speed / 50;
         if (start <= -scrollHeight) {
           start = 0;
         }
@@ -41,9 +41,10 @@ const TeleprompterPreview = ({ text, fontSize, speed, isScrolling }: Teleprompte
   }, [isScrolling, speed]);
 
   return (
-    <div className="overflow-hidden">
+    <div className="overflow-hidden p-4 sm:p-6">
       <div
         ref={textRef}
+        className="px-4 sm:px-6 py-8 sm:py-12"
         style={{
           fontSize: `${fontSize}px`,
           lineHeight: '1.5',

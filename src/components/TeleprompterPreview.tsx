@@ -9,14 +9,14 @@ interface TeleprompterPreviewProps {
 
 const TeleprompterPreview = ({ text, fontSize, speed, isScrolling }: TeleprompterPreviewProps) => {
   const textRef = useRef<HTMLDivElement | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (isScrolling && textRef.current) {
       const scrollHeight = textRef.current.scrollHeight;
-      // Start with text visible at the top of the screen (0 position)
       let start = 0;
+
       const animateScroll = () => {
-        // Divide speed by 10 to make the scrolling slower
         start -= speed / 10;
         if (start <= -scrollHeight) {
           start = 0;
@@ -24,9 +24,21 @@ const TeleprompterPreview = ({ text, fontSize, speed, isScrolling }: Teleprompte
         if (textRef.current) {
           textRef.current.style.transform = `translateY(${start}px)`;
         }
-        requestAnimationFrame(animateScroll);
+        animationFrameRef.current = requestAnimationFrame(animateScroll);
       };
-      animateScroll();
+
+      animationFrameRef.current = requestAnimationFrame(animateScroll);
+
+      // Cleanup function to stop animation
+      return () => {
+        if (animationFrameRef.current) {
+          cancelAnimationFrame(animationFrameRef.current);
+          // Reset position when stopping
+          if (textRef.current) {
+            textRef.current.style.transform = `translateY(0px)`;
+          }
+        }
+      };
     }
   }, [isScrolling, speed]);
 

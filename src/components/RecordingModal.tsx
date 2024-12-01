@@ -4,6 +4,8 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Camera, Monitor, MonitorSmartphone } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useState, useEffect } from "react";
 
 interface RecordingModalProps {
   isOpen: boolean;
@@ -28,6 +30,37 @@ const RecordingModal = ({
   cameraResolution,
   setCameraResolution,
 }: RecordingModalProps) => {
+  const [videoDevices, setVideoDevices] = useState<MediaDeviceInfo[]>([]);
+  const [audioDevices, setAudioDevices] = useState<MediaDeviceInfo[]>([]);
+  const [selectedVideoDevice, setSelectedVideoDevice] = useState<string>("");
+  const [selectedAudioDevice, setSelectedAudioDevice] = useState<string>("");
+
+  useEffect(() => {
+    const getDevices = async () => {
+      try {
+        // Request permission to access devices
+        await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        
+        const videoInputs = devices.filter(device => device.kind === 'videoinput');
+        const audioInputs = devices.filter(device => device.kind === 'audioinput');
+        
+        setVideoDevices(videoInputs);
+        setAudioDevices(audioInputs);
+        
+        // Set default selections
+        if (videoInputs.length > 0) setSelectedVideoDevice(videoInputs[0].deviceId);
+        if (audioInputs.length > 0) setSelectedAudioDevice(audioInputs[0].deviceId);
+      } catch (error) {
+        console.error('Error accessing media devices:', error);
+      }
+    };
+
+    if (isOpen) {
+      getDevices();
+    }
+  }, [isOpen]);
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[425px] bg-gray-900 text-white flex flex-col h-[90vh]">
@@ -79,13 +112,48 @@ const RecordingModal = ({
               </RadioGroup>
 
               {(recordingType === "camera" || recordingType === "both") && (
-                <div className="space-y-2">
-                  <Label className="text-lg font-medium">Camera Resolution</Label>
-                  <RadioGroup
-                    value={cameraResolution}
-                    onValueChange={(value: "landscape" | "portrait") => setCameraResolution(value)}
-                    className="grid grid-cols-1 gap-4"
-                  >
+                <>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label className="text-lg font-medium">Select Camera</Label>
+                      <Select value={selectedVideoDevice} onValueChange={setSelectedVideoDevice}>
+                        <SelectTrigger className="w-full bg-gray-800 border-gray-700">
+                          <SelectValue placeholder="Select a camera" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-gray-800 border-gray-700">
+                          {videoDevices.map((device) => (
+                            <SelectItem key={device.deviceId} value={device.deviceId}>
+                              {device.label || `Camera ${videoDevices.indexOf(device) + 1}`}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-lg font-medium">Select Microphone</Label>
+                      <Select value={selectedAudioDevice} onValueChange={setSelectedAudioDevice}>
+                        <SelectTrigger className="w-full bg-gray-800 border-gray-700">
+                          <SelectValue placeholder="Select a microphone" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-gray-800 border-gray-700">
+                          {audioDevices.map((device) => (
+                            <SelectItem key={device.deviceId} value={device.deviceId}>
+                              {device.label || `Microphone ${audioDevices.indexOf(device) + 1}`}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-lg font-medium">Camera Resolution</Label>
+                    <RadioGroup
+                      value={cameraResolution}
+                      onValueChange={(value: "landscape" | "portrait") => setCameraResolution(value)}
+                      className="grid grid-cols-1 gap-4"
+                    >
                     <div className="flex items-center space-x-4 p-4 rounded-lg border border-gray-700 hover:bg-gray-800 cursor-pointer">
                       <RadioGroupItem value="landscape" id="landscape" />
                       <Label htmlFor="landscape" className="cursor-pointer">1920x1080 (Landscape)</Label>
@@ -94,8 +162,9 @@ const RecordingModal = ({
                       <RadioGroupItem value="portrait" id="portrait" />
                       <Label htmlFor="portrait" className="cursor-pointer">1080x1920 (Portrait)</Label>
                     </div>
-                  </RadioGroup>
-                </div>
+                    </RadioGroup>
+                  </div>
+                </>
               )}
 
               {isPreviewActive && (

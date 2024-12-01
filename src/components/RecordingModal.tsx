@@ -78,7 +78,7 @@ const RecordingModal = ({
                 </div>
               </RadioGroup>
 
-              {(recordingType === "camera") && (
+              {(recordingType === "camera" || recordingType === "both") && (
                 <div className="space-y-2">
                   <Label className="text-lg font-medium">Camera Resolution</Label>
                   <RadioGroup
@@ -99,7 +99,7 @@ const RecordingModal = ({
               )}
 
               {isPreviewActive && (
-                <div className={`aspect-video bg-gray-800 rounded-lg overflow-hidden ${cameraResolution === "portrait" ? "aspect-[9/16]" : ""}`}>
+                <div className={`relative ${cameraResolution === "portrait" ? "w-[240px] h-[427px]" : "w-full aspect-video"} mx-auto bg-gray-800 rounded-lg overflow-hidden`}>
                   <video
                     ref={previewVideoRef}
                     autoPlay
@@ -113,7 +113,7 @@ const RecordingModal = ({
           </ScrollArea>
         </div>
         
-        <div className="p-6 border-t border-gray-800">
+        <div className="p-6 border-t border-gray-800 mt-auto">
           <Button
             onClick={onStartRecording}
             className="w-full bg-red-500 hover:bg-red-600 text-white py-6 text-lg"

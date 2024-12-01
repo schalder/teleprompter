@@ -34,7 +34,7 @@ const Preview = () => {
                 <Download className="w-4 h-4 mr-2" />
                 Download MP4
               </Button>
-              <Button variant="outline" onClick={() => navigate("/")}>
+              <Button variant="outline" onClick={() => navigate("/")} className="text-gray-900">
                 <RotateCcw className="w-4 h-4 mr-2" />
                 Record Again
               </Button>

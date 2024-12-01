@@ -1,11 +1,30 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
 
 export const useMediaStream = () => {
   const [previewStream, setPreviewStream] = useState<MediaStream | null>(null);
   const { toast } = useToast();
   const previewVideoRef = useRef<HTMLVideoElement | null>(null);
-  const hasAttemptedPermission = useRef(false);
+  const hasPermission = useRef<boolean>(false);
+  const permissionRequested = useRef<boolean>(false);
+
+  // Check if device is mobile
+  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+  useEffect(() => {
+    // Check initial permission state
+    const checkInitialPermissions = async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        stream.getTracks().forEach(track => track.stop());
+        hasPermission.current = true;
+      } catch (error) {
+        hasPermission.current = false;
+      }
+    };
+
+    checkInitialPermissions();
+  }, []);
 
   const startPreview = async (
     recordingType: "camera" | "screen",
@@ -16,34 +35,43 @@ export const useMediaStream = () => {
         previewStream.getTracks().forEach((track) => track.stop());
       }
 
-      // Reset permission attempt flag when starting new preview
-      hasAttemptedPermission.current = false;
-
       let stream: MediaStream | null = null;
 
       if (recordingType === "camera") {
-        // Detect if running on mobile
-        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        // Use portrait by default on mobile
+        const effectiveResolution = isMobile ? "portrait" : cameraResolution;
         
-        // Set default resolution based on device type
-        const defaultResolution = isMobile ? "portrait" : cameraResolution;
-        
-        // Request the stream with specific constraints
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            width: { ideal: defaultResolution === "landscape" ? 1920 : 1080 },
-            height: { ideal: defaultResolution === "landscape" ? 1080 : 1920 },
-            frameRate: { ideal: 30 },
-            facingMode: "user",
-          },
-          audio: {
-            echoCancellation: true,
-            noiseSuppression: true,
-            sampleRate: 48000,
-          },
-        });
-
-        console.log('Camera stream obtained:', stream.getVideoTracks()[0].getSettings());
+        // Only request permissions if we haven't already
+        if (!hasPermission.current && !permissionRequested.current) {
+          permissionRequested.current = true;
+          
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              width: { ideal: effectiveResolution === "landscape" ? 1920 : 1080 },
+              height: { ideal: effectiveResolution === "landscape" ? 1080 : 1920 },
+              frameRate: { ideal: 30 },
+              facingMode: "user",
+            },
+            audio: {
+              echoCancellation: true,
+              noiseSuppression: true,
+              sampleRate: 48000,
+            },
+          });
+          
+          hasPermission.current = true;
+        } else if (hasPermission.current) {
+          // If we already have permission, just get the stream
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              width: { ideal: effectiveResolution === "landscape" ? 1920 : 1080 },
+              height: { ideal: effectiveResolution === "landscape" ? 1080 : 1920 },
+              frameRate: { ideal: 30 },
+              facingMode: "user",
+            },
+            audio: true
+          });
+        }
       } else if (recordingType === "screen") {
         stream = await navigator.mediaDevices.getDisplayMedia({ 
           video: {
@@ -57,35 +85,22 @@ export const useMediaStream = () => {
         setPreviewStream(stream);
         if (previewVideoRef.current) {
           previewVideoRef.current.srcObject = stream;
-          try {
-            await previewVideoRef.current.play();
-            hasAttemptedPermission.current = true;
-            toast({
-              title: "Preview started",
-              description: "Your camera preview is now active.",
-            });
-          } catch (playError) {
-            console.error("Preview play error:", playError);
-            throw new Error("Failed to start video preview. Please check your device settings.");
-          }
+          await previewVideoRef.current.play();
+          console.log('Preview started successfully');
         }
       }
     } catch (error) {
       console.error("Preview error:", error);
       
-      // Only show error toast if we haven't already attempted to get permissions
-      if (!hasAttemptedPermission.current) {
-        let errorMessage = "Failed to start preview. ";
+      // Only show error if we haven't shown it before
+      if (!permissionRequested.current) {
+        let errorMessage = "Please grant camera and microphone permissions when prompted.";
         
         if (error instanceof Error) {
-          if (error.name === "NotAllowedError" || error.name === "PermissionDeniedError") {
-            errorMessage = "Please grant camera and microphone permissions when prompted.";
-          } else if (error.name === "NotFoundError") {
+          if (error.name === "NotFoundError") {
             errorMessage = "No camera found. Please ensure your device has a camera.";
           } else if (error.name === "NotReadableError" || error.name === "AbortError") {
             errorMessage = "Camera is in use by another app. Please close other camera apps.";
-          } else {
-            errorMessage = error.message || "Please check your camera permissions and try again.";
           }
         }
 
@@ -94,9 +109,11 @@ export const useMediaStream = () => {
           title: "Camera Access Required",
           description: errorMessage,
         });
-        
-        hasAttemptedPermission.current = true;
       }
+      
+      // Reset permission state on error
+      hasPermission.current = false;
+      permissionRequested.current = true;
     }
   };
 
@@ -108,8 +125,8 @@ export const useMediaStream = () => {
     if (previewVideoRef.current) {
       previewVideoRef.current.srcObject = null;
     }
-    // Reset permission attempt flag when stopping preview
-    hasAttemptedPermission.current = false;
+    // Only reset permission requested flag when stopping preview
+    permissionRequested.current = false;
   };
 
   return {

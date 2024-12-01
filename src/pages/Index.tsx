@@ -80,7 +80,7 @@ const Index = () => {
     }
   };
 
-  const startRecording = async () => {
+const startRecording = async () => {
     setIsPreviewing(false);
     try {
       let finalStream: MediaStream;
@@ -161,7 +161,6 @@ const Index = () => {
           boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
           transform: "translate3d(0,0,0)",
           willChange: "transform",
-          position: "fixed",
           isolation: "isolate"
         };
 

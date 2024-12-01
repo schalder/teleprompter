@@ -84,6 +84,7 @@ const Index = () => {
     try {
       let finalStream: MediaStream;
       let pipVideo: HTMLVideoElement | null = null;
+      let stopButton: HTMLButtonElement | null = null;
 
       if (recordingType === "camera") {
         finalStream = await navigator.mediaDevices.getUserMedia({ 
@@ -96,7 +97,6 @@ const Index = () => {
           audio: true
         });
       } else if (recordingType === "both") {
-        // Get both camera and screen streams
         const cameraStream = await navigator.mediaDevices.getUserMedia({ 
           video: true, 
           audio: true 
@@ -109,18 +109,23 @@ const Index = () => {
           }
         });
 
-        // Create a composite stream with screen video and camera audio
         const [screenTrack] = screenStream.getVideoTracks();
         const [audioTrack] = cameraStream.getAudioTracks();
         finalStream = new MediaStream([screenTrack, audioTrack]);
 
-        // Create and style PiP video element for camera
+        // Create PiP video element for camera
         pipVideo = document.createElement("video");
         pipVideo.srcObject = new MediaStream([cameraStream.getVideoTracks()[0]]);
         pipVideo.autoplay = true;
-        pipVideo.muted = true; // Prevent audio feedback
+        pipVideo.muted = true;
+        pipVideo.setAttribute("id", "pip-video-overlay");
         
-        // Set styles for PiP video
+        // Create floating stop button
+        stopButton = document.createElement("button");
+        stopButton.setAttribute("id", "floating-stop-button");
+        stopButton.textContent = "Stop Recording";
+        
+        // Styles for PiP video
         const pipStyles = {
           position: "fixed",
           bottom: "20px",
@@ -129,29 +134,56 @@ const Index = () => {
           height: "180px",
           borderRadius: "50%",
           objectFit: "cover",
-          zIndex: "2147483647", // Maximum z-index value
+          zIndex: "2147483647",
           border: "3px solid white",
           boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
-          backgroundColor: "black", // Add background color
-          transform: "translateZ(0)", // Force hardware acceleration
-          willChange: "transform" // Optimize for animations
+          backgroundColor: "black",
+          transform: "translateZ(0)",
+          willChange: "transform",
+          pointerEvents: "none"
         };
 
-        // Apply styles to PiP video
-        Object.assign(pipVideo.style, pipStyles);
-        
-        // Ensure the video stays on top
-        pipVideo.setAttribute("id", "pip-video-overlay");
-        
-        // Add to document body
-        document.body.appendChild(pipVideo);
+        // Styles for stop button
+        const stopButtonStyles = {
+          position: "fixed",
+          top: "20px",
+          right: "20px",
+          padding: "10px 20px",
+          backgroundColor: "#ef4444",
+          color: "white",
+          border: "none",
+          borderRadius: "8px",
+          cursor: "pointer",
+          fontWeight: "bold",
+          zIndex: "2147483647",
+          boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
+          transform: "translateZ(0)",
+          willChange: "transform"
+        };
 
-        // Add event listener for visibility change
-        document.addEventListener("visibilitychange", () => {
-          if (pipVideo && document.visibilityState === "visible") {
-            pipVideo.play();
+        // Apply styles
+        Object.assign(pipVideo.style, pipStyles);
+        Object.assign(stopButton.style, stopButtonStyles);
+        
+        // Add elements to document body
+        document.body.appendChild(pipVideo);
+        document.body.appendChild(stopButton);
+
+        // Handle stop button click
+        stopButton.onclick = () => {
+          if (mediaRecorderRef.current) {
+            mediaRecorderRef.current.stop();
           }
-        });
+        };
+
+        // Handle visibility change
+        const handleVisibilityChange = () => {
+          if (document.visibilityState === "visible" && pipVideo) {
+            pipVideo.play().catch(() => {});
+          }
+        };
+
+        document.addEventListener("visibilitychange", handleVisibilityChange);
 
         // Handle screen track ending
         screenTrack.addEventListener("ended", () => {
@@ -173,11 +205,21 @@ const Index = () => {
 
       mediaRecorder.onstop = () => {
         const blob = new Blob(chunksRef.current, { type: "video/mp4" });
-        // Remove PiP video if it exists
+        
+        // Clean up PiP video and stop button
         const pipVideo = document.getElementById("pip-video-overlay");
+        const stopButton = document.getElementById("floating-stop-button");
+        
         if (pipVideo) {
           pipVideo.remove();
         }
+        if (stopButton) {
+          stopButton.remove();
+        }
+
+        // Clean up event listeners
+        document.removeEventListener("visibilitychange", handleVisibilityChange);
+        
         navigate("/preview", { state: { videoUrl: URL.createObjectURL(blob) } });
       };
 

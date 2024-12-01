@@ -7,6 +7,8 @@ import TeleprompterControls from "@/components/TeleprompterControls";
 import RecordingModal from "@/components/RecordingModal";
 import TeleprompterPreview from "@/components/TeleprompterPreview";
 import RecordingControls from "@/components/RecordingControls";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 
 const Index = () => {
   const [text, setText] = useState("");
@@ -15,6 +17,7 @@ const Index = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [isPreviewing, setIsPreviewing] = useState(false);
   const [recordingType, setRecordingType] = useState<"camera" | "screen" | "both">("both");
+  const [cameraResolution, setCameraResolution] = useState<"landscape" | "portrait">("landscape");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [previewStream, setPreviewStream] = useState<MediaStream | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -88,10 +91,14 @@ const Index = () => {
       let stopButton: HTMLButtonElement | null = null;
 
       if (recordingType === "camera") {
-        finalStream = await navigator.mediaDevices.getUserMedia({
-          video: true,
+        const constraints = {
+          video: {
+            width: cameraResolution === "landscape" ? 1920 : 1080,
+            height: cameraResolution === "landscape" ? 1080 : 1920,
+          },
           audio: true
-        });
+        };
+        finalStream = await navigator.mediaDevices.getUserMedia(constraints);
       } else if (recordingType === "screen") {
         finalStream = await navigator.mediaDevices.getDisplayMedia({
           video: {
@@ -101,7 +108,10 @@ const Index = () => {
         });
       } else if (recordingType === "both") {
         const cameraStream = await navigator.mediaDevices.getUserMedia({
-          video: true,
+          video: {
+            width: cameraResolution === "landscape" ? 1920 : 1080,
+            height: cameraResolution === "landscape" ? 1080 : 1920,
+          },
           audio: true
         });
         const screenStream = await navigator.mediaDevices.getDisplayMedia({
@@ -225,7 +235,6 @@ const Index = () => {
           stopButton.remove();
         }
 
-        // Remove event listener using the stored ref
         if (handleVisibilityChangeRef.current) {
           document.removeEventListener("visibilitychange", handleVisibilityChangeRef.current);
           handleVisibilityChangeRef.current = null;
@@ -234,9 +243,7 @@ const Index = () => {
         navigate("/preview", { state: { videoUrl: URL.createObjectURL(blob) } });
       };
 
-      // Stop preview if it's running
       stopPreview();
-
       mediaRecorder.start();
       setIsRecording(true);
       toast({
@@ -287,6 +294,26 @@ const Index = () => {
             speed={speed}
             setSpeed={setSpeed}
           />
+
+          {recordingType === "camera" && (
+            <div className="space-y-2">
+              <Label>Camera Resolution</Label>
+              <RadioGroup
+                value={cameraResolution}
+                onValueChange={(value: "landscape" | "portrait") => setCameraResolution(value)}
+                className="flex space-x-4"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="landscape" id="landscape" />
+                  <Label htmlFor="landscape">1920x1080 (Landscape)</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="portrait" id="portrait" />
+                  <Label htmlFor="portrait">1080x1920 (Portrait)</Label>
+                </div>
+              </RadioGroup>
+            </div>
+          )}
 
           <RecordingControls
             isRecording={isRecording}

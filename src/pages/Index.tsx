@@ -54,9 +54,7 @@ const Index = () => {
           video: {
             width: cameraResolution === "landscape" ? 1920 : 1080,
             height: cameraResolution === "landscape" ? 1080 : 1920,
-            facingMode: "user",
-            // Add transform to mirror the camera feed
-            transform: "scaleX(-1)"
+            facingMode: "user"
           }, 
           audio: true 
         });

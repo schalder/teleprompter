@@ -31,6 +31,9 @@ const Preview = () => {
         a.click();
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
+
+        // Log MIME type for debugging
+        console.log('File MIME type:', mimeType);
       })
       .catch(error => {
         console.error("Error downloading video:", error);
@@ -92,11 +95,8 @@ const Preview = () => {
     }
   };
 
-  const showConvertButton = mimeType && (
-    mimeType.includes('webm') || 
-    mimeType === 'video/webm' || 
-    mimeType.startsWith('video/webm')
-  );
+  // Always show convert button for WebM videos
+  const showConvertButton = true;
 
   return (
     <div className="min-h-screen bg-gray-900 text-white p-6">

@@ -12,6 +12,8 @@ interface RecordingModalProps {
   onStartRecording: () => void;
   previewVideoRef: React.RefObject<HTMLVideoElement>;
   isPreviewActive: boolean;
+  cameraResolution: "landscape" | "portrait";
+  setCameraResolution: (resolution: "landscape" | "portrait") => void;
 }
 
 const RecordingModal = ({
@@ -22,6 +24,8 @@ const RecordingModal = ({
   onStartRecording,
   previewVideoRef,
   isPreviewActive,
+  cameraResolution,
+  setCameraResolution,
 }: RecordingModalProps) => {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -71,8 +75,28 @@ const RecordingModal = ({
             </div>
           </RadioGroup>
 
+          {(recordingType === "camera") && (
+            <div className="space-y-2">
+              <Label className="text-lg font-medium">Camera Resolution</Label>
+              <RadioGroup
+                value={cameraResolution}
+                onValueChange={(value: "landscape" | "portrait") => setCameraResolution(value)}
+                className="grid grid-cols-1 gap-4"
+              >
+                <div className="flex items-center space-x-4 p-4 rounded-lg border border-gray-700 hover:bg-gray-800 cursor-pointer">
+                  <RadioGroupItem value="landscape" id="landscape" />
+                  <Label htmlFor="landscape" className="cursor-pointer">1920x1080 (Landscape)</Label>
+                </div>
+                <div className="flex items-center space-x-4 p-4 rounded-lg border border-gray-700 hover:bg-gray-800 cursor-pointer">
+                  <RadioGroupItem value="portrait" id="portrait" />
+                  <Label htmlFor="portrait" className="cursor-pointer">1080x1920 (Portrait)</Label>
+                </div>
+              </RadioGroup>
+            </div>
+          )}
+
           {isPreviewActive && (
-            <div className="aspect-video bg-gray-800 rounded-lg overflow-hidden">
+            <div className={`aspect-video bg-gray-800 rounded-lg overflow-hidden ${cameraResolution === "portrait" ? "aspect-[9/16]" : ""}`}>
               <video
                 ref={previewVideoRef}
                 autoPlay

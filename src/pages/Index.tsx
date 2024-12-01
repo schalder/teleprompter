@@ -7,8 +7,6 @@ import TeleprompterControls from "@/components/TeleprompterControls";
 import RecordingModal from "@/components/RecordingModal";
 import TeleprompterPreview from "@/components/TeleprompterPreview";
 import RecordingControls from "@/components/RecordingControls";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Label } from "@/components/ui/label";
 
 const Index = () => {
   const [text, setText] = useState("");
@@ -306,51 +304,6 @@ const Index = () => {
             setSpeed={setSpeed}
           />
 
-          {recordingType === "camera" && (
-            <div className="space-y-2">
-              <Label className="text-lg font-medium">Camera Resolution</Label>
-              <RadioGroup
-                value={cameraResolution}
-                onValueChange={(value: "landscape" | "portrait") => setCameraResolution(value)}
-                className="flex space-x-4"
-              >
-                <div 
-                  className="flex items-center space-x-2 cursor-pointer hover:bg-gray-700 p-3 rounded-lg transition-colors border border-gray-600"
-                  onClick={() => setCameraResolution("landscape")}
-                >
-                  <RadioGroupItem value="landscape" id="landscape" className="cursor-pointer" />
-                  <Label htmlFor="landscape" className="cursor-pointer hover:text-primary">1920x1080 (Landscape)</Label>
-                </div>
-                <div 
-                  className="flex items-center space-x-2 cursor-pointer hover:bg-gray-700 p-3 rounded-lg transition-colors border border-gray-600"
-                  onClick={() => setCameraResolution("portrait")}
-                >
-                  <RadioGroupItem value="portrait" id="portrait" className="cursor-pointer" />
-                  <Label htmlFor="portrait" className="cursor-pointer hover:text-primary">1080x1920 (Portrait)</Label>
-                </div>
-              </RadioGroup>
-            </div>
-          )}
-
-          <div className="space-y-2">
-            <Label className="text-lg font-medium">Recording Type</Label>
-            <div className="grid grid-cols-3 gap-4">
-              {["camera", "screen", "both"].map((type) => (
-                <button
-                  key={type}
-                  onClick={() => setRecordingType(type as "camera" | "screen" | "both")}
-                  className={`p-4 rounded-lg border transition-all ${
-                    recordingType === type
-                      ? "bg-primary border-primary text-primary-foreground"
-                      : "border-gray-600 hover:bg-gray-700"
-                  }`}
-                >
-                  <span className="capitalize">{type}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
           <RecordingControls
             isRecording={isRecording}
             recordingType={recordingType}
@@ -383,6 +336,8 @@ const Index = () => {
           }}
           previewVideoRef={previewVideoRef}
           isPreviewActive={!!previewStream}
+          cameraResolution={cameraResolution}
+          setCameraResolution={setCameraResolution}
         />
       </div>
     </div>

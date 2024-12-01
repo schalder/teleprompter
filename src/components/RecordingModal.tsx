@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { Camera, Monitor, MonitorSmartphone } from "lucide-react";
+import { Camera, Monitor } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState, useEffect } from "react";
@@ -10,8 +10,8 @@ import { useState, useEffect } from "react";
 interface RecordingModalProps {
   isOpen: boolean;
   onClose: () => void;
-  recordingType: "camera" | "screen" | "both";
-  setRecordingType: (type: "camera" | "screen" | "both") => void;
+  recordingType: "camera" | "screen";
+  setRecordingType: (type: "camera" | "screen") => void;
   onStartRecording: () => void;
   previewVideoRef: React.RefObject<HTMLVideoElement>;
   isPreviewActive: boolean;
@@ -38,7 +38,6 @@ const RecordingModal = ({
   useEffect(() => {
     const getDevices = async () => {
       try {
-        // Request permission to access devices
         await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
         const devices = await navigator.mediaDevices.enumerateDevices();
         
@@ -48,7 +47,6 @@ const RecordingModal = ({
         setVideoDevices(videoInputs);
         setAudioDevices(audioInputs);
         
-        // Set default selections
         if (videoInputs.length > 0) setSelectedVideoDevice(videoInputs[0].deviceId);
         if (audioInputs.length > 0) setSelectedAudioDevice(audioInputs[0].deviceId);
       } catch (error) {
@@ -74,7 +72,7 @@ const RecordingModal = ({
 
               <RadioGroup
                 value={recordingType}
-                onValueChange={(value: "camera" | "screen" | "both") => setRecordingType(value)}
+                onValueChange={(value: "camera" | "screen") => setRecordingType(value)}
                 className="grid grid-cols-1 gap-4"
               >
                 <div className="flex items-center space-x-4 p-4 rounded-lg border border-gray-700 hover:bg-gray-800 cursor-pointer">
@@ -98,20 +96,9 @@ const RecordingModal = ({
                     </div>
                   </Label>
                 </div>
-
-                <div className="flex items-center space-x-4 p-4 rounded-lg border border-gray-700 hover:bg-gray-800 cursor-pointer">
-                  <RadioGroupItem value="both" id="both" />
-                  <Label htmlFor="both" className="flex items-center space-x-3 cursor-pointer">
-                    <MonitorSmartphone className="w-5 h-5" />
-                    <div>
-                      <div className="font-medium">Screen & Camera</div>
-                      <div className="text-sm text-gray-400">Record your screen with camera overlay</div>
-                    </div>
-                  </Label>
-                </div>
               </RadioGroup>
 
-              {(recordingType === "camera" || recordingType === "both") && (
+              {recordingType === "camera" && (
                 <>
                   <div className="space-y-4">
                     <div className="space-y-2">

@@ -14,7 +14,7 @@ const Index = () => {
   const [speed, setSpeed] = useState(8);
   const [isRecording, setIsRecording] = useState(false);
   const [isPreviewing, setIsPreviewing] = useState(false);
-  const [recordingType, setRecordingType] = useState<"camera" | "screen" | "both">("both");
+  const [recordingType, setRecordingType] = useState<"camera" | "screen">("camera");
   const [cameraResolution, setCameraResolution] = useState<"landscape" | "portrait">("landscape");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [previewStream, setPreviewStream] = useState<MediaStream | null>(null);

@@ -19,6 +19,7 @@ const Index = () => {
   const [previewStream, setPreviewStream] = useState<MediaStream | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const previewVideoRef = useRef<HTMLVideoElement | null>(null);
+  const handleVisibilityChangeRef = useRef<(() => void) | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
   const chunksRef = useRef<Blob[]>([]);
@@ -176,14 +177,15 @@ const Index = () => {
           }
         };
 
-        // Handle visibility change
-        const handleVisibilityChange = () => {
+        // Create visibility change handler and store in ref
+        handleVisibilityChangeRef.current = () => {
           if (document.visibilityState === "visible" && pipVideo) {
             pipVideo.play().catch(() => {});
           }
         };
 
-        document.addEventListener("visibilitychange", handleVisibilityChange);
+        // Add event listener
+        document.addEventListener("visibilitychange", handleVisibilityChangeRef.current);
 
         // Handle screen track ending
         screenTrack.addEventListener("ended", () => {
@@ -217,8 +219,11 @@ const Index = () => {
           stopButton.remove();
         }
 
-        // Clean up event listeners
-        document.removeEventListener("visibilitychange", handleVisibilityChange);
+        // Remove event listener using the stored ref
+        if (handleVisibilityChangeRef.current) {
+          document.removeEventListener("visibilitychange", handleVisibilityChangeRef.current);
+          handleVisibilityChangeRef.current = null;
+        }
         
         navigate("/preview", { state: { videoUrl: URL.createObjectURL(blob) } });
       };

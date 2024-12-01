@@ -15,16 +15,37 @@ export const useMediaStream = () => {
     // Check initial permission state
     const checkInitialPermissions = async () => {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        // First try to enumerate devices to see what's available
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const hasVideoDevice = devices.some(device => device.kind === 'videoinput');
+        const hasAudioDevice = devices.some(device => device.kind === 'audioinput');
+
+        if (!hasVideoDevice || !hasAudioDevice) {
+          console.log('Missing required devices:', { hasVideoDevice, hasAudioDevice });
+          return;
+        }
+
+        // Then try to get actual permissions
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+          video: {
+            facingMode: 'user',
+            width: { ideal: isMobile ? 1080 : 1920 },
+            height: { ideal: isMobile ? 1920 : 1080 }
+          }, 
+          audio: true 
+        });
+        
+        console.log('Initial permission check successful');
         stream.getTracks().forEach(track => track.stop());
         hasPermission.current = true;
       } catch (error) {
+        console.log('Initial permission check failed:', error);
         hasPermission.current = false;
       }
     };
 
     checkInitialPermissions();
-  }, []);
+  }, [isMobile]);
 
   const startPreview = async (
     recordingType: "camera" | "screen",
@@ -41,9 +62,21 @@ export const useMediaStream = () => {
         // Use portrait by default on mobile
         const effectiveResolution = isMobile ? "portrait" : cameraResolution;
         
+        // Check device availability first
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const hasVideoDevice = devices.some(device => device.kind === 'videoinput');
+        const hasAudioDevice = devices.some(device => device.kind === 'audioinput');
+
+        if (!hasVideoDevice || !hasAudioDevice) {
+          throw new Error(
+            !hasVideoDevice ? "No camera found" : "No microphone found"
+          );
+        }
+
         // Only request permissions if we haven't already
         if (!hasPermission.current && !permissionRequested.current) {
           permissionRequested.current = true;
+          console.log('Requesting camera permissions...');
           
           stream = await navigator.mediaDevices.getUserMedia({
             video: {
@@ -59,8 +92,10 @@ export const useMediaStream = () => {
             },
           });
           
+          console.log('Camera permissions granted');
           hasPermission.current = true;
         } else if (hasPermission.current) {
+          console.log('Using existing permissions');
           // If we already have permission, just get the stream
           stream = await navigator.mediaDevices.getUserMedia({
             video: {
@@ -82,6 +117,7 @@ export const useMediaStream = () => {
       }
 
       if (stream) {
+        console.log('Stream obtained successfully');
         setPreviewStream(stream);
         if (previewVideoRef.current) {
           previewVideoRef.current.srcObject = stream;
@@ -101,6 +137,8 @@ export const useMediaStream = () => {
             errorMessage = "No camera found. Please ensure your device has a camera.";
           } else if (error.name === "NotReadableError" || error.name === "AbortError") {
             errorMessage = "Camera is in use by another app. Please close other camera apps.";
+          } else if (error.name === "NotAllowedError") {
+            errorMessage = "Camera access denied. Please check your browser settings and try again.";
           }
         }
 
@@ -125,7 +163,7 @@ export const useMediaStream = () => {
     if (previewVideoRef.current) {
       previewVideoRef.current.srcObject = null;
     }
-    // Only reset permission requested flag when stopping preview
+    // Reset permission requested flag when stopping preview
     permissionRequested.current = false;
   };
 

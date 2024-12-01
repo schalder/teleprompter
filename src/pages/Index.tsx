@@ -94,35 +94,53 @@ const Index = () => {
       let pipVideo: HTMLVideoElement | null = null;
       let stopButton: HTMLButtonElement | null = null;
 
+      const videoConstraints = {
+        width: { ideal: 1920 },
+        height: { ideal: 1080 },
+        frameRate: { ideal: 30 }
+      };
+
+      const audioConstraints = {
+        echoCancellation: true,
+        noiseSuppression: true,
+        sampleRate: 48000,
+        channelCount: 2
+      };
+
       if (recordingType === "camera") {
         const constraints = {
           video: {
+            ...videoConstraints,
             width: cameraResolution === "landscape" ? 1920 : 1080,
             height: cameraResolution === "landscape" ? 1080 : 1920,
           },
-          audio: true
+          audio: audioConstraints
         };
         finalStream = await navigator.mediaDevices.getUserMedia(constraints);
       } else if (recordingType === "screen") {
         finalStream = await navigator.mediaDevices.getDisplayMedia({
           video: {
+            ...videoConstraints,
             displaySurface: 'monitor'
           },
-          audio: true
+          audio: audioConstraints
         });
       } else if (recordingType === "both") {
         const cameraStream = await navigator.mediaDevices.getUserMedia({
           video: {
+            ...videoConstraints,
             width: cameraResolution === "landscape" ? 1920 : 1080,
             height: cameraResolution === "landscape" ? 1080 : 1920,
           },
-          audio: true
+          audio: audioConstraints
         });
         const screenStream = await navigator.mediaDevices.getDisplayMedia({
           video: {
+            ...videoConstraints,
             displaySurface: 'monitor'
           },
           audio: {
+            ...audioConstraints,
             echoCancellation: true,
             noiseSuppression: true
           }
@@ -206,18 +224,14 @@ const Index = () => {
       }
 
       const options = {
-        mimeType: 'video/mp4;codecs=avc1.42E01E,mp4a.40.2',
-        videoBitsPerSecond: 2500000, // 2.5 Mbps
-        audioBitsPerSecond: 128000   // 128 kbps
+        mimeType: 'video/webm;codecs=h264,opus',
+        videoBitsPerSecond: 8000000, // 8 Mbps for high quality
+        audioBitsPerSecond: 128000   // 128 kbps for audio
       };
       
-      // Fallback if MP4 is not supported
+      // Fallback if WebM is not supported
       if (!MediaRecorder.isTypeSupported(options.mimeType)) {
-        options.mimeType = 'video/webm;codecs=h264,opus';
-        toast({
-          title: "Notice",
-          description: "MP4 recording not supported by your browser. Falling back to WebM format.",
-        });
+        options.mimeType = 'video/mp4;codecs=avc1.42E01E,mp4a.40.2';
       }
       
       const mediaRecorder = new MediaRecorder(finalStream, options);

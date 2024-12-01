@@ -13,14 +13,10 @@ const Preview = () => {
     fetch(videoUrl)
       .then(response => response.blob())
       .then(blob => {
-        // Create a new blob with proper MP4 MIME type
-        const mp4Blob = new Blob([blob], { 
-          type: 'video/mp4; codecs="avc1.42E01E, mp4a.40.2"'
-        });
-        const url = window.URL.createObjectURL(mp4Blob);
+        const url = window.URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = "teleprompter-recording.mp4";
+        a.download = "teleprompter-recording.webm"; // Changed extension to .webm
         document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);
@@ -47,7 +43,7 @@ const Preview = () => {
             <div className="flex space-x-4 justify-center">
               <Button onClick={handleDownload}>
                 <Download className="w-4 h-4 mr-2" />
-                Download MP4
+                Download Recording
               </Button>
               <Button variant="outline" onClick={() => navigate("/")} className="text-gray-900">
                 <RotateCcw className="w-4 h-4 mr-2" />

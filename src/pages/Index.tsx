@@ -28,7 +28,6 @@ const Index = () => {
   const chunksRef = useRef<Blob[]>([]);
 
   useEffect(() => {
-    // Cleanup function to stop all tracks when component unmounts
     return () => {
       if (previewStream) {
         previewStream.getTracks().forEach(track => track.stop());
@@ -37,7 +36,6 @@ const Index = () => {
   }, [previewStream]);
 
   useEffect(() => {
-    // Start preview when recording type changes in modal
     if (isModalOpen) {
       startPreview();
     }
@@ -45,7 +43,6 @@ const Index = () => {
 
   const startPreview = async () => {
     try {
-      // Stop any existing preview
       if (previewStream) {
         previewStream.getTracks().forEach(track => track.stop());
       }
@@ -128,19 +125,16 @@ const Index = () => {
         const [audioTrack] = cameraStream.getAudioTracks();
         finalStream = new MediaStream([screenTrack, audioTrack]);
 
-        // Create PiP video element for camera
         pipVideo = document.createElement("video");
         pipVideo.srcObject = new MediaStream([cameraStream.getVideoTracks()[0]]);
         pipVideo.autoplay = true;
         pipVideo.muted = true;
         pipVideo.setAttribute("id", "pip-video-overlay");
         
-        // Create floating stop button
         stopButton = document.createElement("button");
         stopButton.setAttribute("id", "floating-stop-button");
         stopButton.textContent = "Stop Recording";
         
-        // Enhanced styles for PiP video to ensure it stays on top across all windows
         const pipStyles = {
           position: "fixed",
           bottom: "20px",
@@ -159,7 +153,6 @@ const Index = () => {
           isolation: "isolate"
         };
 
-        // Enhanced styles for stop button to ensure visibility across windows
         const stopButtonStyles = {
           position: "fixed",
           top: "20px",
@@ -178,32 +171,26 @@ const Index = () => {
           isolation: "isolate"
         };
 
-        // Apply styles
         Object.assign(pipVideo.style, pipStyles);
         Object.assign(stopButton.style, stopButtonStyles);
         
-        // Add elements to document body
         document.body.appendChild(pipVideo);
         document.body.appendChild(stopButton);
 
-        // Handle stop button click
         stopButton.onclick = () => {
           if (mediaRecorderRef.current) {
             mediaRecorderRef.current.stop();
           }
         };
 
-        // Create visibility change handler and store in ref
         handleVisibilityChangeRef.current = () => {
           if (document.visibilityState === "visible" && pipVideo) {
             pipVideo.play().catch(() => {});
           }
         };
 
-        // Add event listener
         document.addEventListener("visibilitychange", handleVisibilityChangeRef.current);
 
-        // Handle screen track ending
         screenTrack.addEventListener("ended", () => {
           if (mediaRecorderRef.current) {
             mediaRecorderRef.current.stop();
@@ -211,7 +198,13 @@ const Index = () => {
         });
       }
 
-      const mediaRecorder = new MediaRecorder(finalStream);
+      const options = {
+        mimeType: 'video/webm;codecs=h264,opus',
+        videoBitsPerSecond: 2500000, // 2.5 Mbps
+        audioBitsPerSecond: 128000   // 128 kbps
+      };
+      
+      const mediaRecorder = new MediaRecorder(finalStream, options);
       mediaRecorderRef.current = mediaRecorder;
       chunksRef.current = [];
 
@@ -222,12 +215,10 @@ const Index = () => {
       };
 
       mediaRecorder.onstop = () => {
-        // Create blob with proper MP4 MIME type and codecs
         const blob = new Blob(chunksRef.current, { 
-          type: 'video/mp4; codecs="avc1.42E01E, mp4a.40.2"'
+          type: 'video/webm'
         });
         
-        // Clean up PiP video and stop button
         const pipVideo = document.getElementById("pip-video-overlay");
         const stopButton = document.getElementById("floating-stop-button");
         
@@ -247,7 +238,7 @@ const Index = () => {
       };
 
       stopPreview();
-      mediaRecorder.start();
+      mediaRecorder.start(1000); // Capture chunks every second
       setIsRecording(true);
       toast({
         title: "Recording started",
@@ -266,7 +257,6 @@ const Index = () => {
     if (mediaRecorderRef.current) {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
-      // Remove PiP video if it exists
       const pipVideo = document.querySelector("video.fixed");
       if (pipVideo) {
         pipVideo.remove();
@@ -283,7 +273,6 @@ const Index = () => {
       <div className="max-w-4xl mx-auto space-y-8">
         <h1 className="text-3xl font-bold text-center mb-8">Teleprompter</h1>
         
-        {/* Teleprompter Preview moved to top */}
         <TeleprompterPreview
           text={text}
           fontSize={fontSize}
@@ -291,7 +280,6 @@ const Index = () => {
           isScrolling={isPreviewing || isRecording}
         />
         
-        {/* Controls section */}
         <div className="space-y-6 bg-gray-800 p-6 rounded-lg">
           <TeleprompterControls
             fontSize={fontSize}
@@ -356,7 +344,6 @@ const Index = () => {
           />
         </div>
 
-        {/* Text input moved to bottom */}
         <Textarea
           value={text}
           onChange={(e) => setText(e.target.value)}

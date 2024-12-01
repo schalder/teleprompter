@@ -11,7 +11,7 @@ import RecordingControls from "@/components/RecordingControls";
 const Index = () => {
   const [text, setText] = useState("");
   const [fontSize, setFontSize] = useState(32);
-  const [speed, setSpeed] = useState(8); // Changed default speed to 8
+  const [speed, setSpeed] = useState(8);
   const [isRecording, setIsRecording] = useState(false);
   const [isPreviewing, setIsPreviewing] = useState(false);
   const [recordingType, setRecordingType] = useState<"camera" | "screen" | "both">("both");
@@ -314,8 +314,6 @@ const Index = () => {
 
           <RecordingControls
             isRecording={isRecording}
-            recordingType={recordingType}
-            setRecordingType={setRecordingType}
             onStartRecording={() => setIsModalOpen(true)}
             onStopRecording={stopRecording}
             isPreviewing={isPreviewing}

@@ -32,8 +32,8 @@ const RecordingControls = ({
           <>
             <Button
               onClick={onTogglePreview}
-              variant="outline"
-              className="w-full py-6 text-lg text-gray-300 hover:text-white"
+              variant="secondary"
+              className="w-full py-6 text-lg"
             >
               {isPreviewing ? "Stop Preview" : "Preview Scroll"}
             </Button>

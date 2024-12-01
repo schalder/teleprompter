@@ -24,9 +24,10 @@ const TeleprompterPreview = ({ text, fontSize, speed, isScrolling }: Teleprompte
       
       // Calculate total scroll distance and duration
       const totalScrollHeight = container.scrollHeight - scrollContainer.clientHeight;
-      // Adjusted speed calculation to make it slower
-      // Now speed of 1 is very slow, 100 is faster but still controlled
-      const scrollDuration = (totalScrollHeight * (200 - speed)) / 5; // Increased base duration
+      
+      // Adjusted speed calculation to make it even slower
+      // Now speed of 1 is extremely slow, and 100 is moderately fast
+      const scrollDuration = (totalScrollHeight * (400 - speed * 2)) / 5; // Doubled base duration for slower scrolling
       const startTime = performance.now();
 
       // Animate scroll

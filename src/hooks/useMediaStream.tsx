@@ -18,11 +18,20 @@ export const useMediaStream = () => {
       let stream: MediaStream | null = null;
 
       if (recordingType === "camera") {
-        // First check if we have permissions
-        const permissions = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
-        permissions.getTracks().forEach(track => track.stop());
+        // Check permissions first
+        try {
+          const permissions = await navigator.permissions.query({ name: 'camera' as PermissionName });
+          console.log('Camera permission status:', permissions.state);
+          
+          if (permissions.state === 'denied') {
+            throw new Error('Camera access is blocked. Please enable it in your browser settings.');
+          }
+        } catch (permError) {
+          console.log('Permission check error:', permError);
+          // Continue anyway as some mobile browsers don't support permissions API
+        }
 
-        // Now request the stream with specific constraints
+        // Request the stream with specific constraints
         stream = await navigator.mediaDevices.getUserMedia({
           video: {
             width: { ideal: cameraResolution === "landscape" ? 1920 : 1080 },
@@ -36,6 +45,8 @@ export const useMediaStream = () => {
             sampleRate: 48000,
           },
         });
+
+        console.log('Camera stream obtained:', stream.getVideoTracks()[0].getSettings());
       } else if (recordingType === "screen") {
         stream = await navigator.mediaDevices.getDisplayMedia({ 
           video: {
@@ -49,22 +60,38 @@ export const useMediaStream = () => {
         setPreviewStream(stream);
         if (previewVideoRef.current) {
           previewVideoRef.current.srcObject = stream;
-          await previewVideoRef.current.play().catch(error => {
-            console.error("Preview play error:", error);
+          try {
+            await previewVideoRef.current.play();
             toast({
-              title: "Error",
-              description: "Failed to play preview. Please check your permissions.",
-              variant: "destructive",
+              title: "Preview started",
+              description: "Your camera preview is now active.",
             });
-          });
+          } catch (playError) {
+            console.error("Preview play error:", playError);
+            throw new Error("Failed to start video preview. Please check your device settings.");
+          }
         }
       }
     } catch (error) {
       console.error("Preview error:", error);
+      let errorMessage = "Failed to start preview. ";
+      
+      if (error instanceof Error) {
+        if (error.name === "NotAllowedError" || error.name === "PermissionDeniedError") {
+          errorMessage += "Camera access was denied. Please grant camera and microphone permissions and try again.";
+        } else if (error.name === "NotFoundError") {
+          errorMessage += "No camera found. Please ensure your device has a camera and try again.";
+        } else if (error.name === "NotReadableError" || error.name === "AbortError") {
+          errorMessage += "Your camera might be in use by another application. Please close other apps using the camera and try again.";
+        } else {
+          errorMessage += error.message || "Please ensure camera and microphone permissions are granted and try again.";
+        }
+      }
+
       toast({
-        title: "Error",
-        description: "Failed to start preview. Please ensure camera and microphone permissions are granted and try again.",
         variant: "destructive",
+        title: "Error",
+        description: errorMessage,
       });
     }
   };

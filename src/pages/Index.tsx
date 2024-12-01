@@ -102,7 +102,11 @@ const Index = () => {
           audio: true 
         });
         const screenStream = await navigator.mediaDevices.getDisplayMedia({ 
-          video: true 
+          video: true,
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true
+          }
         });
 
         // Create a composite stream with screen video and camera audio
@@ -114,17 +118,47 @@ const Index = () => {
         pipVideo = document.createElement("video");
         pipVideo.srcObject = new MediaStream([cameraStream.getVideoTracks()[0]]);
         pipVideo.autoplay = true;
-        pipVideo.style.position = "fixed";
-        pipVideo.style.bottom = "20px";
-        pipVideo.style.right = "20px";
-        pipVideo.style.width = "180px";
-        pipVideo.style.height = "180px";
-        pipVideo.style.borderRadius = "50%";
-        pipVideo.style.objectFit = "cover";
-        pipVideo.style.zIndex = "9999";
-        pipVideo.style.border = "3px solid white";
-        pipVideo.style.boxShadow = "0 4px 6px -1px rgb(0 0 0 / 0.1)";
+        pipVideo.muted = true; // Prevent audio feedback
+        
+        // Set styles for PiP video
+        const pipStyles = {
+          position: "fixed",
+          bottom: "20px",
+          right: "20px",
+          width: "180px",
+          height: "180px",
+          borderRadius: "50%",
+          objectFit: "cover",
+          zIndex: "2147483647", // Maximum z-index value
+          border: "3px solid white",
+          boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
+          backgroundColor: "black", // Add background color
+          transform: "translateZ(0)", // Force hardware acceleration
+          willChange: "transform" // Optimize for animations
+        };
+
+        // Apply styles to PiP video
+        Object.assign(pipVideo.style, pipStyles);
+        
+        // Ensure the video stays on top
+        pipVideo.setAttribute("id", "pip-video-overlay");
+        
+        // Add to document body
         document.body.appendChild(pipVideo);
+
+        // Add event listener for visibility change
+        document.addEventListener("visibilitychange", () => {
+          if (pipVideo && document.visibilityState === "visible") {
+            pipVideo.play();
+          }
+        });
+
+        // Handle screen track ending
+        screenTrack.addEventListener("ended", () => {
+          if (mediaRecorderRef.current) {
+            mediaRecorderRef.current.stop();
+          }
+        });
       }
 
       const mediaRecorder = new MediaRecorder(finalStream);
@@ -140,9 +174,9 @@ const Index = () => {
       mediaRecorder.onstop = () => {
         const blob = new Blob(chunksRef.current, { type: "video/mp4" });
         // Remove PiP video if it exists
-        const existingPipVideo = document.querySelector("video.fixed");
-        if (existingPipVideo) {
-          existingPipVideo.remove();
+        const pipVideo = document.getElementById("pip-video-overlay");
+        if (pipVideo) {
+          pipVideo.remove();
         }
         navigate("/preview", { state: { videoUrl: URL.createObjectURL(blob) } });
       };

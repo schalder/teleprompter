@@ -28,17 +28,21 @@ export const useRecording = () => {
         channelCount: 2
       };
 
+      // First check permissions
       if (recordingType === "camera") {
+        const permissions = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+        permissions.getTracks().forEach(track => track.stop());
+
         finalStream = await navigator.mediaDevices.getUserMedia({
-          video: videoConstraints,
+          video: {
+            ...videoConstraints,
+            facingMode: "user"
+          },
           audio: audioConstraints
         });
       } else {
         finalStream = await navigator.mediaDevices.getDisplayMedia({
-          video: {
-            ...videoConstraints,
-            displaySurface: 'monitor'
-          },
+          video: videoConstraints,
           audio: audioConstraints
         });
       }
@@ -50,7 +54,7 @@ export const useRecording = () => {
       };
       
       if (!MediaRecorder.isTypeSupported(options.mimeType)) {
-        options.mimeType = 'video/mp4;codecs=avc1.42E01E,mp4a.40.2';
+        options.mimeType = 'video/webm';
       }
       
       const mediaRecorder = new MediaRecorder(finalStream, options);
@@ -65,7 +69,7 @@ export const useRecording = () => {
 
       mediaRecorder.onstop = () => {
         const blob = new Blob(chunksRef.current, { 
-          type: mediaRecorder.mimeType || 'video/mp4' 
+          type: mediaRecorder.mimeType || 'video/webm' 
         });
         
         navigate("/preview", { 
@@ -84,9 +88,10 @@ export const useRecording = () => {
 
       return true;
     } catch (error) {
+      console.error("Recording error:", error);
       toast({
         title: "Error",
-        description: "Failed to start recording. Please check your permissions.",
+        description: "Failed to start recording. Please ensure camera and microphone permissions are granted and try again.",
         variant: "destructive",
       });
       return false;

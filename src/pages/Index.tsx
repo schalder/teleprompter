@@ -1,7 +1,6 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Slider } from "@/components/ui/slider";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
 import TeleprompterControls from "@/components/TeleprompterControls";
@@ -14,10 +13,67 @@ const Index = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [recordingType, setRecordingType] = useState<"camera" | "screen" | "both">("both");
   const [isPreviewMode, setIsPreviewMode] = useState(false);
+  const [previewStream, setPreviewStream] = useState<MediaStream | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const previewVideoRef = useRef<HTMLVideoElement | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
   const chunksRef = useRef<Blob[]>([]);
+
+  useEffect(() => {
+    // Cleanup function to stop all tracks when component unmounts
+    return () => {
+      if (previewStream) {
+        previewStream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, [previewStream]);
+
+  const startPreview = async () => {
+    try {
+      // Stop any existing preview
+      if (previewStream) {
+        previewStream.getTracks().forEach(track => track.stop());
+      }
+
+      let stream: MediaStream | null = null;
+
+      if (recordingType === "camera" || recordingType === "both") {
+        stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      } else if (recordingType === "screen") {
+        stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+      }
+
+      if (stream) {
+        setPreviewStream(stream);
+        if (previewVideoRef.current) {
+          previewVideoRef.current.srcObject = stream;
+        }
+        setIsPreviewMode(true);
+        toast({
+          title: "Preview started",
+          description: `Previewing ${recordingType} recording`,
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to start preview. Please check your permissions.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const stopPreview = () => {
+    if (previewStream) {
+      previewStream.getTracks().forEach(track => track.stop());
+      setPreviewStream(null);
+    }
+    if (previewVideoRef.current) {
+      previewVideoRef.current.srcObject = null;
+    }
+    setIsPreviewMode(false);
+  };
 
   const startRecording = async () => {
     try {
@@ -61,6 +117,9 @@ const Index = () => {
         const blob = new Blob(chunksRef.current, { type: "video/mp4" });
         navigate("/preview", { state: { videoUrl: URL.createObjectURL(blob) } });
       };
+
+      // Stop preview if it's running
+      stopPreview();
 
       mediaRecorder.start();
       setIsRecording(true);
@@ -108,16 +167,6 @@ const Index = () => {
             speed={speed}
             setSpeed={setSpeed}
           />
-          
-          <div className="flex items-center space-x-4">
-            <Button
-              onClick={() => setIsPreviewMode(!isPreviewMode)}
-              variant="outline"
-              className="w-full"
-            >
-              {isPreviewMode ? "Stop Preview" : "Start Preview"}
-            </Button>
-          </div>
 
           <RecordingControls
             isRecording={isRecording}
@@ -126,6 +175,28 @@ const Index = () => {
             onStartRecording={startRecording}
             onStopRecording={stopRecording}
           />
+
+          <div className="flex items-center space-x-4">
+            <Button
+              onClick={isPreviewMode ? stopPreview : startPreview}
+              variant="outline"
+              className="w-full"
+            >
+              {isPreviewMode ? "Stop Preview" : "Start Preview"}
+            </Button>
+          </div>
+
+          {isPreviewMode && (
+            <div className="mt-4 relative aspect-video">
+              <video
+                ref={previewVideoRef}
+                autoPlay
+                playsInline
+                muted
+                className="w-full h-full rounded-lg bg-gray-800"
+              />
+            </div>
+          )}
         </div>
 
         <div 

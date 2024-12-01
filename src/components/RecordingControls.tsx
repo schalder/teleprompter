@@ -72,7 +72,7 @@ const RecordingControls = ({
             <Button
               onClick={onTogglePreview}
               variant="outline"
-              className="w-full"
+              className="w-full text-gray-700 hover:text-gray-900"
             >
               {isPreviewing ? "Stop Preview" : "Preview Scroll"}
             </Button>

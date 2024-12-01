@@ -30,9 +30,9 @@ const RecordingModal = ({
 }: RecordingModalProps) => {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px] bg-gray-900 text-white max-h-[90vh] overflow-hidden">
-        <ScrollArea className="h-full pr-4">
-          <div className="space-y-6 py-4">
+      <DialogContent className="sm:max-w-[425px] bg-gray-900 text-white overflow-hidden flex flex-col max-h-[90vh]">
+        <ScrollArea className="flex-1">
+          <div className="space-y-6 p-6">
             <div className="text-center">
               <h2 className="text-2xl font-bold">Start Recording</h2>
               <p className="text-gray-400">Choose what you want to record</p>

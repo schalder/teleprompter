@@ -6,6 +6,7 @@ const Preview = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const videoUrl = location.state?.videoUrl;
+  const mimeType = location.state?.mimeType;
 
   const handleDownload = () => {
     if (!videoUrl) return;
@@ -13,9 +14,10 @@ const Preview = () => {
     fetch(videoUrl)
       .then(response => response.blob())
       .then(blob => {
-        // Determine the file extension based on the blob type
-        const fileExtension = blob.type.includes('mp4') ? 'mp4' : 'webm';
-        const url = window.URL.createObjectURL(blob);
+        const fileExtension = mimeType?.includes('mp4') ? 'mp4' : 'webm';
+        const url = window.URL.createObjectURL(
+          new Blob([blob], { type: mimeType || 'video/mp4' })
+        );
         const a = document.createElement("a");
         a.href = url;
         a.download = `teleprompter-recording.${fileExtension}`;

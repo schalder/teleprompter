@@ -225,7 +225,7 @@ const Index = () => {
 
       mediaRecorder.onstop = () => {
         const blob = new Blob(chunksRef.current, { 
-          type: 'video/webm'
+          type: mediaRecorder.mimeType || 'video/mp4' 
         });
         
         const pipVideo = document.getElementById("pip-video-overlay");
@@ -243,7 +243,7 @@ const Index = () => {
           handleVisibilityChangeRef.current = null;
         }
         
-        navigate("/preview", { state: { videoUrl: URL.createObjectURL(blob) } });
+        navigate("/preview", { state: { videoUrl: URL.createObjectURL(blob), mimeType: mediaRecorder.mimeType } });
       };
 
       stopPreview();

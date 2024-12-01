@@ -64,7 +64,6 @@ const Index = () => {
         setPreviewStream(stream);
         if (previewVideoRef.current) {
           previewVideoRef.current.srcObject = stream;
-          // Add CSS transform to mirror the video preview
           previewVideoRef.current.style.transform = "scaleX(-1)";
         }
       }
@@ -94,11 +93,11 @@ const Index = () => {
       let pipVideo: HTMLVideoElement | null = null;
       let stopButton: HTMLButtonElement | null = null;
 
-      const videoConstraints = {
-        width: { ideal: 1920 },
-        height: { ideal: 1080 },
+      const getVideoConstraints = (isPortrait: boolean) => ({
+        width: { ideal: isPortrait ? 1080 : 1920 },
+        height: { ideal: isPortrait ? 1920 : 1080 },
         frameRate: { ideal: 30 }
-      };
+      });
 
       const audioConstraints = {
         echoCancellation: true,
@@ -107,13 +106,12 @@ const Index = () => {
         channelCount: 2
       };
 
+      const isPortraitMode = cameraResolution === "portrait";
+      const videoConstraints = getVideoConstraints(isPortraitMode);
+
       if (recordingType === "camera") {
         const constraints = {
-          video: {
-            ...videoConstraints,
-            width: cameraResolution === "landscape" ? 1920 : 1080,
-            height: cameraResolution === "landscape" ? 1080 : 1920,
-          },
+          video: videoConstraints,
           audio: audioConstraints
         };
         finalStream = await navigator.mediaDevices.getUserMedia(constraints);
@@ -127,11 +125,7 @@ const Index = () => {
         });
       } else if (recordingType === "both") {
         const cameraStream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            ...videoConstraints,
-            width: cameraResolution === "landscape" ? 1920 : 1080,
-            height: cameraResolution === "landscape" ? 1080 : 1920,
-          },
+          video: videoConstraints,
           audio: audioConstraints
         });
         const screenStream = await navigator.mediaDevices.getDisplayMedia({

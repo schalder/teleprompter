@@ -60,7 +60,7 @@ export const useRecording = () => {
         });
       }
 
-      // Enhanced stream readiness check
+      // Enhanced stream readiness check with longer timeout
       await new Promise((resolve, reject) => {
         const videoTrack = finalStream.getVideoTracks()[0];
         const audioTrack = finalStream.getAudioTracks()[0];
@@ -69,36 +69,59 @@ export const useRecording = () => {
         console.log('Video track state:', videoTrack.readyState);
         console.log('Audio track state:', audioTrack?.readyState);
 
-        if (videoTrack.readyState === 'live' && (!audioTrack || audioTrack.readyState === 'live')) {
-          console.log('Stream is ready');
+        // Function to check if stream is ready
+        const isStreamReady = () => {
+          return videoTrack.readyState === 'live' && (!audioTrack || audioTrack.readyState === 'live');
+        };
+
+        // Initial check
+        if (isStreamReady()) {
+          console.log('Stream is ready immediately');
           resolve(true);
-        } else {
-          const timeout = setTimeout(() => {
-            reject(new Error('Stream initialization timeout'));
-          }, 5000);
-
-          videoTrack.onended = () => {
-            clearTimeout(timeout);
-            reject(new Error('Video track ended'));
-          };
-
-          const checkTracks = () => {
-            if (videoTrack.readyState === 'live' && (!audioTrack || audioTrack.readyState === 'live')) {
-              clearTimeout(timeout);
-              resolve(true);
-            }
-          };
-
-          videoTrack.onunmute = checkTracks;
-          if (audioTrack) {
-            audioTrack.onunmute = checkTracks;
-          }
+          return;
         }
+
+        // Set up a longer timeout for stream initialization
+        const timeout = setTimeout(() => {
+          reject(new Error('Stream initialization timeout'));
+        }, 10000); // 10 seconds timeout
+
+        // Set up periodic checks
+        const checkInterval = setInterval(() => {
+          if (isStreamReady()) {
+            clearInterval(checkInterval);
+            clearTimeout(timeout);
+            console.log('Stream became ready during interval check');
+            resolve(true);
+          }
+        }, 100); // Check every 100ms
+
+        // Clean up on track ended
+        videoTrack.onended = () => {
+          clearInterval(checkInterval);
+          clearTimeout(timeout);
+          reject(new Error('Video track ended'));
+        };
+
+        // Additional track event listeners
+        videoTrack.onunmute = () => {
+          if (isStreamReady()) {
+            clearInterval(checkInterval);
+            clearTimeout(timeout);
+            console.log('Stream became ready on unmute');
+            resolve(true);
+          }
+        };
       });
 
-      // Ensure stable stream with longer delay
+      // Additional stabilization delay
       console.log('Waiting for stream stabilization...');
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // Verify stream is still valid
+      if (!finalStream.active) {
+        throw new Error('Stream became inactive during stabilization');
+      }
 
       const options = {
         mimeType: 'video/webm;codecs=h264,opus',

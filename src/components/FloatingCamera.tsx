@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { useToast } from "@/components/ui/use-toast";
 
 interface FloatingCameraProps {
@@ -9,6 +9,7 @@ interface FloatingCameraProps {
 
 const FloatingCamera = ({ videoRef, isVisible, cameraResolution }: FloatingCameraProps) => {
   const { toast } = useToast();
+  const hasAttemptedPlay = useRef(false);
 
   useEffect(() => {
     const playVideo = async () => {
@@ -21,25 +22,32 @@ const FloatingCamera = ({ videoRef, isVisible, cameraResolution }: FloatingCamer
           return;
         }
 
-        // Wait for video to be ready
-        if (videoRef.current.readyState < 2) {
-          await new Promise<void>((resolve) => {
-            const handleLoadedData = () => {
-              console.log('Video loaded and ready to play');
-              resolve();
-            };
-            videoRef.current!.addEventListener('loadeddata', handleLoadedData, { once: true });
+        // Only attempt to play once per stream
+        if (!hasAttemptedPlay.current) {
+          hasAttemptedPlay.current = true;
+          
+          // Ensure video is ready
+          if (videoRef.current.readyState < 2) {
+            await new Promise<void>((resolve) => {
+              const handleLoadedData = () => {
+                console.log('Video loaded and ready to play');
+                resolve();
+              };
+              videoRef.current!.addEventListener('loadeddata', handleLoadedData, { once: true });
+            });
+          }
+
+          await videoRef.current.play().catch(error => {
+            console.error('Error playing video:', error);
+            throw error;
+          });
+
+          console.log('Floating camera playing successfully', {
+            readyState: videoRef.current.readyState,
+            videoWidth: videoRef.current.videoWidth,
+            videoHeight: videoRef.current.videoHeight
           });
         }
-
-        // Now try to play
-        await videoRef.current.play();
-        console.log('Floating camera playing successfully', {
-          readyState: videoRef.current.readyState,
-          videoWidth: videoRef.current.videoWidth,
-          videoHeight: videoRef.current.videoHeight
-        });
-
       } catch (error) {
         console.error('Error playing floating camera:', error);
         toast({
@@ -51,11 +59,13 @@ const FloatingCamera = ({ videoRef, isVisible, cameraResolution }: FloatingCamer
     };
 
     if (isVisible && videoRef.current?.srcObject) {
+      // Reset play attempt flag when stream changes
+      hasAttemptedPlay.current = false;
       playVideo();
     }
 
-    // Cleanup
     return () => {
+      hasAttemptedPlay.current = false;
       if (videoRef.current) {
         videoRef.current.pause();
       }

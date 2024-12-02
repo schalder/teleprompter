@@ -9,6 +9,7 @@ export const useMediaStream = () => {
   const permissionRequested = useRef<boolean>(false);
   const deviceCheckAttempts = useRef<number>(0);
   const MAX_DEVICE_CHECK_ATTEMPTS = 3;
+  const screenCaptureStream = useRef<MediaStream | null>(null);
 
   // Check if device is mobile
   const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
@@ -90,7 +91,7 @@ export const useMediaStream = () => {
 
       if (recordingType === "camera") {
         const effectiveResolution = isMobile ? "portrait" : cameraResolution;
-        
+
         // Retry device check if needed
         const checkDevices = async () => {
           const { hasVideo, hasAudio, videoDevices } = await checkDeviceAvailability();
@@ -135,12 +136,18 @@ export const useMediaStream = () => {
         hasPermission.current = true;
         deviceCheckAttempts.current = 0;
       } else if (recordingType === "screen") {
-        stream = await navigator.mediaDevices.getDisplayMedia({
-          video: {
-            frameRate: { ideal: 30 }
-          },
-          audio: true
-        });
+        // For screen recording, get a new stream if we don't have one
+        if (!screenCaptureStream.current) {
+          stream = await navigator.mediaDevices.getDisplayMedia({
+            video: {
+              frameRate: { ideal: 30 }
+            },
+            audio: true
+          });
+          screenCaptureStream.current = stream;
+        } else {
+          stream = screenCaptureStream.current;
+        }
       }
 
       if (stream) {
@@ -187,6 +194,10 @@ export const useMediaStream = () => {
     if (previewVideoRef.current) {
       previewVideoRef.current.srcObject = null;
     }
+    if (screenCaptureStream.current) {
+      screenCaptureStream.current.getTracks().forEach((track) => track.stop());
+      screenCaptureStream.current = null;
+    }
     permissionRequested.current = false;
     deviceCheckAttempts.current = 0;
   };
@@ -196,5 +207,6 @@ export const useMediaStream = () => {
     previewVideoRef,
     startPreview,
     stopPreview,
+    screenCaptureStream: screenCaptureStream.current
   };
 };

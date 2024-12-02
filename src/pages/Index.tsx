@@ -22,7 +22,8 @@ const Index = () => {
     previewStream, 
     previewVideoRef, 
     startPreview, 
-    stopPreview 
+    stopPreview,
+    screenCaptureStream 
   } = useMediaStream();
 
   const { 
@@ -47,7 +48,12 @@ const Index = () => {
 
   const handleStartRecording = async () => {
     scrollToTop();
-    const success = await startRecording(recordingType, cameraResolution);
+    // Pass the existing screen capture stream if available
+    const success = await startRecording(
+      recordingType, 
+      cameraResolution,
+      recordingType === "screen" ? screenCaptureStream : null
+    );
     if (success) {
       setIsRecording(true);
       setIsModalOpen(false);

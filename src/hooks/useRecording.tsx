@@ -10,7 +10,8 @@ export const useRecording = () => {
 
   const startRecording = async (
     recordingType: "camera" | "screen",
-    cameraResolution: "landscape" | "portrait"
+    cameraResolution: "landscape" | "portrait",
+    existingStream?: MediaStream | null
   ) => {
     try {
       let finalStream: MediaStream;
@@ -29,32 +30,35 @@ export const useRecording = () => {
         channelCount: 2
       };
 
-      // Check if there's an existing preview stream we can reuse
-      const existingVideoElement = document.querySelector('video');
-      if (recordingType === "camera" && existingVideoElement?.srcObject instanceof MediaStream) {
-        console.log('Reusing existing camera stream');
-        // Stop existing stream to ensure new constraints are applied
-        existingVideoElement.srcObject.getTracks().forEach(track => track.stop());
-        
-        // Create new stream with exact resolution constraints
-        finalStream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            ...videoConstraints,
-            facingMode: "user"
-          },
-          audio: audioConstraints
-        });
+      // If we have an existing stream (like from screen capture), use it
+      if (recordingType === "screen" && existingStream) {
+        console.log('Using existing screen capture stream for recording');
+        finalStream = existingStream;
       } else if (recordingType === "camera") {
-        console.log('Creating new camera stream with resolution:', videoConstraints);
-        finalStream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            ...videoConstraints,
-            facingMode: "user"
-          },
-          audio: audioConstraints
-        });
+        const existingVideoElement = document.querySelector('video');
+        if (existingVideoElement?.srcObject instanceof MediaStream) {
+          console.log('Reusing existing camera stream');
+          existingVideoElement.srcObject.getTracks().forEach(track => track.stop());
+          
+          finalStream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              ...videoConstraints,
+              facingMode: "user"
+            },
+            audio: audioConstraints
+          });
+        } else {
+          console.log('Creating new camera stream with resolution:', videoConstraints);
+          finalStream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              ...videoConstraints,
+              facingMode: "user"
+            },
+            audio: audioConstraints
+          });
+        }
       } else {
-        // For screen recording, maintain aspect ratio but don't force exact resolution
+        // Only request new screen capture if we don't have an existing stream
         finalStream = await navigator.mediaDevices.getDisplayMedia({
           video: {
             width: { ideal: 1920 },

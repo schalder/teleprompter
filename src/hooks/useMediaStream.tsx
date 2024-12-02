@@ -21,7 +21,6 @@ export const useMediaStream = () => {
       let stream: MediaStream | null = null;
 
       if (recordingType === "camera") {
-        // Fix resolution settings based on orientation
         const videoConstraints: MediaTrackConstraints = {
           deviceId: selectedVideoDeviceId ? { exact: selectedVideoDeviceId } : undefined,
           width: { ideal: cameraResolution === "landscape" ? 1920 : 1080 },
@@ -29,14 +28,12 @@ export const useMediaStream = () => {
           frameRate: { ideal: 30 },
         };
 
-        const audioConstraints: MediaTrackConstraints = selectedAudioDeviceId 
-          ? {
-              deviceId: { exact: selectedAudioDeviceId },
-              echoCancellation: true,
-              noiseSuppression: true,
-              sampleRate: 48000,
-            }
-          : true;
+        const audioConstraints: MediaTrackConstraints = {
+          deviceId: selectedAudioDeviceId ? { exact: selectedAudioDeviceId } : undefined,
+          echoCancellation: true,
+          noiseSuppression: true,
+          sampleRate: 48000,
+        };
 
         console.log('Starting preview with constraints:', {
           video: videoConstraints,
@@ -72,16 +69,18 @@ export const useMediaStream = () => {
           }
         }
       } else {
+        const audioConstraints: MediaTrackConstraints = {
+          deviceId: selectedAudioDeviceId ? { exact: selectedAudioDeviceId } : undefined,
+          echoCancellation: true,
+          noiseSuppression: true,
+          sampleRate: 48000,
+        };
+
         stream = await navigator.mediaDevices.getDisplayMedia({
           video: {
             frameRate: { ideal: 30 }
           },
-          audio: selectedAudioDeviceId ? {
-            deviceId: { exact: selectedAudioDeviceId },
-            echoCancellation: true,
-            noiseSuppression: true,
-            sampleRate: 48000,
-          } : true
+          audio: audioConstraints
         });
         screenCaptureStream.current = stream;
       }

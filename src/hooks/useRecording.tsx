@@ -73,9 +73,10 @@ export const useRecording = () => {
         });
       }
 
+      // Improved MediaRecorder options for better mobile compatibility
       const options = {
         mimeType: 'video/webm;codecs=h264,opus',
-        videoBitsPerSecond: 8000000,
+        videoBitsPerSecond: 2500000, // Reduced for better mobile handling
         audioBitsPerSecond: 128000
       };
       
@@ -88,16 +89,26 @@ export const useRecording = () => {
       mediaRecorderRef.current = mediaRecorder;
       chunksRef.current = [];
 
+      // Collect data more frequently on mobile
       mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
+        if (event.data && event.data.size > 0) {
+          console.log('Received chunk of size:', event.data.size);
           chunksRef.current.push(event.data);
         }
       };
 
       mediaRecorder.onstop = () => {
+        console.log('Recording stopped, total chunks:', chunksRef.current.length);
+        
+        // Ensure all chunks are collected before creating blob
         const blob = new Blob(chunksRef.current, { 
           type: mediaRecorder.mimeType || 'video/webm' 
         });
+        
+        console.log('Final blob size:', blob.size);
+        
+        // Clean up the stream
+        finalStream.getTracks().forEach(track => track.stop());
         
         navigate("/preview", { 
           state: { 
@@ -107,8 +118,9 @@ export const useRecording = () => {
         });
       };
 
-      console.log('Starting recording...');
-      mediaRecorder.start(1000);
+      // Collect chunks more frequently (every 500ms instead of 1000ms)
+      console.log('Starting recording with timeslice: 500ms');
+      mediaRecorder.start(500);
       
       toast({
         title: "Recording started",
@@ -128,7 +140,8 @@ export const useRecording = () => {
   };
 
   const stopRecording = () => {
-    if (mediaRecorderRef.current) {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      console.log('Stopping recording...');
       mediaRecorderRef.current.stop();
       return true;
     }

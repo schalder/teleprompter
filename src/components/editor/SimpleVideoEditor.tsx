@@ -1,6 +1,8 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { SimpleVideoControls } from './SimpleVideoControls';
 import { SimpleResizeControls } from './SimpleResizeControls';
+import { TimelineTrack } from './TimelineTrack';
+import { LayerTrack } from './LayerTrack';
 import { Button } from '@/components/ui/button';
 import { Download } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
@@ -23,14 +25,19 @@ export const SimpleVideoEditor = ({ videoUrl }: SimpleVideoEditorProps) => {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [audioTrack, setAudioTrack] = useState<string | null>(null);
+  const [audioVolume, setAudioVolume] = useState(1);
+  const [audioMuted, setAudioMuted] = useState(false);
   const [trimStart, setTrimStart] = useState(0);
   const [trimEnd, setTrimEnd] = useState(0);
+  const [selectionStart, setSelectionStart] = useState<number | undefined>();
+  const [selectionEnd, setSelectionEnd] = useState<number | undefined>();
 
   useEffect(() => {
     if (videoRef.current) {
       videoRef.current.addEventListener('loadedmetadata', () => {
-        setDuration(videoRef.current?.duration || 0);
-        setTrimEnd(videoRef.current?.duration || 0);
+        const videoDuration = videoRef.current?.duration || 0;
+        setDuration(videoDuration);
+        setTrimEnd(videoDuration);
       });
     }
   }, []);
@@ -38,11 +45,13 @@ export const SimpleVideoEditor = ({ videoUrl }: SimpleVideoEditorProps) => {
   useEffect(() => {
     if (audioRef.current && videoRef.current) {
       audioRef.current.currentTime = videoRef.current.currentTime;
+      audioRef.current.volume = audioVolume;
+      audioRef.current.muted = audioMuted;
       if (!videoRef.current.paused) {
         audioRef.current.play();
       }
     }
-  }, [audioTrack]);
+  }, [audioTrack, audioVolume, audioMuted]);
 
   const handleSeek = (time: number) => {
     if (videoRef.current && isFinite(time) && time >= 0 && time <= duration) {
@@ -56,14 +65,25 @@ export const SimpleVideoEditor = ({ videoUrl }: SimpleVideoEditorProps) => {
 
   const handleTrimStart = () => {
     if (!videoRef.current) return;
-    const startTime = videoRef.current.currentTime;
-    setTrimStart(startTime);
-    // Set video to start from trim point
-    videoRef.current.currentTime = startTime;
-    toast({
-      title: "Start Trimmed",
-      description: `Removed first ${startTime.toFixed(1)} seconds of video`,
-    });
+    if (selectionStart !== undefined && selectionEnd !== undefined) {
+      setTrimStart(selectionStart);
+      setTrimEnd(selectionEnd);
+      videoRef.current.currentTime = selectionStart;
+      toast({
+        title: "Selection Trimmed",
+        description: `Removed section from ${selectionStart.toFixed(1)}s to ${selectionEnd.toFixed(1)}s`,
+      });
+    } else {
+      const startTime = videoRef.current.currentTime;
+      setTrimStart(startTime);
+      videoRef.current.currentTime = startTime;
+      toast({
+        title: "Start Trimmed",
+        description: `Removed first ${startTime.toFixed(1)} seconds of video`,
+      });
+    }
+    setSelectionStart(undefined);
+    setSelectionEnd(undefined);
   };
 
   const handleTrimEnd = () => {
@@ -97,12 +117,10 @@ export const SimpleVideoEditor = ({ videoUrl }: SimpleVideoEditorProps) => {
       const currentVideoTime = videoRef.current.currentTime;
       setCurrentTime(currentVideoTime);
 
-      // Handle trim end
       if (currentVideoTime >= trimEnd) {
         videoRef.current.currentTime = trimStart;
       }
       
-      // Sync audio with video
       if (audioRef.current) {
         audioRef.current.currentTime = currentVideoTime;
       }
@@ -130,7 +148,6 @@ export const SimpleVideoEditor = ({ videoUrl }: SimpleVideoEditorProps) => {
     });
 
     try {
-      // Check for captureStream support
       const stream = videoRef.current.captureStream?.() || 
                     videoRef.current.mozCaptureStream?.();
                     
@@ -161,11 +178,9 @@ export const SimpleVideoEditor = ({ videoUrl }: SimpleVideoEditorProps) => {
         });
       };
 
-      // Start recording from trim start
       videoRef.current.currentTime = trimStart;
       mediaRecorder.start();
 
-      // Stop recording at trim end
       videoRef.current.addEventListener('timeupdate', function handler() {
         if (videoRef.current?.currentTime >= trimEnd) {
           mediaRecorder.stop();
@@ -173,7 +188,6 @@ export const SimpleVideoEditor = ({ videoUrl }: SimpleVideoEditorProps) => {
         }
       });
 
-      // Play the video to start the export
       videoRef.current.play();
     } catch (error) {
       console.error('Export error:', error);
@@ -211,19 +225,52 @@ export const SimpleVideoEditor = ({ videoUrl }: SimpleVideoEditorProps) => {
         />
       </div>
 
-      <SimpleVideoControls
-        duration={duration}
-        currentTime={currentTime}
-        onSeek={handleSeek}
-        onTrimStart={handleTrimStart}
-        onTrimEnd={handleTrimEnd}
-        onAddAudio={handleAddAudio}
-      />
+      <div className="space-y-4">
+        <TimelineTrack
+          currentTime={currentTime}
+          duration={duration}
+          onSeek={handleSeek}
+          selectionStart={selectionStart}
+          selectionEnd={selectionEnd}
+          onSelectionChange={(start, end) => {
+            setSelectionStart(start);
+            setSelectionEnd(end);
+          }}
+        />
 
-      <Button onClick={handleExport} className="w-full">
-        <Download className="w-4 h-4 mr-2" />
-        Export Video
-      </Button>
+        <div className="space-y-2">
+          <LayerTrack
+            name="Video Track"
+            type="video"
+            duration={duration}
+          />
+          {audioTrack && (
+            <LayerTrack
+              name="Audio Track"
+              type="audio"
+              duration={duration}
+              volume={audioVolume}
+              isMuted={audioMuted}
+              onVolumeChange={setAudioVolume}
+              onMuteToggle={() => setAudioMuted(!audioMuted)}
+            />
+          )}
+        </div>
+
+        <SimpleVideoControls
+          duration={duration}
+          currentTime={currentTime}
+          onSeek={handleSeek}
+          onTrimStart={handleTrimStart}
+          onTrimEnd={handleTrimEnd}
+          onAddAudio={handleAddAudio}
+        />
+
+        <Button onClick={handleExport} className="w-full">
+          <Download className="w-4 h-4 mr-2" />
+          Export Video
+        </Button>
+      </div>
     </div>
   );
 };

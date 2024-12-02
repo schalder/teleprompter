@@ -16,50 +16,56 @@ export const useMediaStream = () => {
   const checkDeviceAvailability = async () => {
     try {
       const devices = await navigator.mediaDevices.enumerateDevices();
-      const videoDevices = devices.filter(device => device.kind === 'videoinput');
-      const audioDevices = devices.filter(device => device.kind === 'audioinput');
+      const videoDevices = devices.filter(device => device.kind === 'videoinput' && device.deviceId);
+      const audioDevices = devices.filter(device => device.kind === 'audioinput' && device.deviceId);
 
       console.log('Available devices:', {
-        video: videoDevices.length,
-        audio: audioDevices.length
+        video: videoDevices.map(d => ({ id: d.deviceId, label: d.label })),
+        audio: audioDevices.map(d => ({ id: d.deviceId, label: d.label }))
       });
 
       return {
         hasVideo: videoDevices.length > 0,
-        hasAudio: audioDevices.length > 0
+        hasAudio: audioDevices.length > 0,
+        videoDevices,
+        audioDevices
       };
     } catch (error) {
       console.error('Error checking devices:', error);
-      return { hasVideo: false, hasAudio: false };
+      return { hasVideo: false, hasAudio: false, videoDevices: [], audioDevices: [] };
     }
   };
 
   useEffect(() => {
     const checkInitialPermissions = async () => {
       try {
-        const { hasVideo, hasAudio } = await checkDeviceAvailability();
+        const { hasVideo, hasAudio, videoDevices } = await checkDeviceAvailability();
         
         if (!hasVideo || !hasAudio) {
           console.log('Missing required devices');
           return;
         }
 
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: 'user',
-            width: { ideal: isMobile ? 1080 : 1920 },
-            height: { ideal: isMobile ? 1920 : 1080 }
-          },
-          audio: {
-            echoCancellation: true,
-            noiseSuppression: true
-          }
-        });
+        // Request permissions with the first available device explicitly
+        if (videoDevices.length > 0) {
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              deviceId: { exact: videoDevices[0].deviceId },
+              facingMode: 'user',
+              width: { ideal: isMobile ? 1080 : 1920 },
+              height: { ideal: isMobile ? 1920 : 1080 }
+            },
+            audio: {
+              echoCancellation: true,
+              noiseSuppression: true
+            }
+          });
 
-        console.log('Initial permission check successful');
-        stream.getTracks().forEach(track => track.stop());
-        hasPermission.current = true;
-        deviceCheckAttempts.current = 0;
+          console.log('Initial permission check successful with device:', videoDevices[0].label);
+          stream.getTracks().forEach(track => track.stop());
+          hasPermission.current = true;
+          deviceCheckAttempts.current = 0;
+        }
       } catch (error) {
         console.log('Initial permission check failed:', error);
         hasPermission.current = false;
@@ -71,7 +77,9 @@ export const useMediaStream = () => {
 
   const startPreview = async (
     recordingType: "camera" | "screen",
-    cameraResolution: "landscape" | "portrait"
+    cameraResolution: "landscape" | "portrait",
+    selectedVideoDeviceId?: string,
+    selectedAudioDeviceId?: string
   ) => {
     try {
       if (previewStream) {
@@ -85,7 +93,7 @@ export const useMediaStream = () => {
         
         // Retry device check if needed
         const checkDevices = async () => {
-          const { hasVideo, hasAudio } = await checkDeviceAvailability();
+          const { hasVideo, hasAudio, videoDevices } = await checkDeviceAvailability();
           if (!hasVideo || !hasAudio) {
             if (deviceCheckAttempts.current < MAX_DEVICE_CHECK_ATTEMPTS) {
               deviceCheckAttempts.current++;
@@ -95,19 +103,26 @@ export const useMediaStream = () => {
             }
             throw new Error(!hasVideo ? "No camera found" : "No microphone found");
           }
-          return true;
+
+          // If no device is selected, use the first available device
+          const effectiveVideoDeviceId = selectedVideoDeviceId || 
+            (videoDevices.length > 0 ? videoDevices[0].deviceId : undefined);
+
+          return effectiveVideoDeviceId;
         };
 
-        await checkDevices();
+        const videoDeviceId = await checkDevices();
 
         const constraints = {
           video: {
+            deviceId: videoDeviceId ? { exact: videoDeviceId } : undefined,
             width: { ideal: effectiveResolution === "landscape" ? 1920 : 1080 },
             height: { ideal: effectiveResolution === "landscape" ? 1080 : 1920 },
             frameRate: { ideal: 30 },
             facingMode: "user",
           },
           audio: {
+            deviceId: selectedAudioDeviceId ? { exact: selectedAudioDeviceId } : undefined,
             echoCancellation: true,
             noiseSuppression: true,
             sampleRate: 48000,

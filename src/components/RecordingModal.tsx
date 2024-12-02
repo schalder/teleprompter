@@ -42,18 +42,27 @@ const RecordingModal = ({
     try {
       const devices = await navigator.mediaDevices.enumerateDevices();
       
-      const videoInputs = devices.filter(device => device.kind === 'videoinput');
-      const audioInputs = devices.filter(device => device.kind === 'audioinput');
+      const videoInputs = devices.filter(device => device.kind === 'videoinput' && device.deviceId);
+      const audioInputs = devices.filter(device => device.kind === 'audioinput' && device.deviceId);
       
+      console.log('Available devices in modal:', {
+        video: videoInputs.map(d => ({ id: d.deviceId, label: d.label })),
+        audio: audioInputs.map(d => ({ id: d.deviceId, label: d.label }))
+      });
+
       setVideoDevices(videoInputs);
       setAudioDevices(audioInputs);
       
-      // Only set default devices if none are selected
+      // Set default devices only if none are selected and devices are available
       if (!selectedVideoDevice && videoInputs.length > 0) {
-        setSelectedVideoDevice(videoInputs[0].deviceId);
+        const defaultDevice = videoInputs[0];
+        console.log('Setting default video device:', defaultDevice.label);
+        setSelectedVideoDevice(defaultDevice.deviceId);
       }
       if (!selectedAudioDevice && audioInputs.length > 0) {
-        setSelectedAudioDevice(audioInputs[0].deviceId);
+        const defaultDevice = audioInputs[0];
+        console.log('Setting default audio device:', defaultDevice.label);
+        setSelectedAudioDevice(defaultDevice.deviceId);
       }
     } catch (error) {
       console.error('Error accessing media devices:', error);
@@ -98,16 +107,21 @@ const RecordingModal = ({
           previewVideoRef.current.srcObject.getTracks().forEach(track => track.stop());
         }
 
+        console.log('Updating preview with devices:', {
+          video: selectedVideoDevice,
+          audio: selectedAudioDevice
+        });
+
         // Get new stream with selected devices
         const stream = await navigator.mediaDevices.getUserMedia({
           video: selectedVideoDevice ? {
-            deviceId: selectedVideoDevice,
+            deviceId: { exact: selectedVideoDevice },
             width: { ideal: cameraResolution === "landscape" ? 1920 : 1080 },
             height: { ideal: cameraResolution === "landscape" ? 1080 : 1920 },
             frameRate: { ideal: 30 },
           } : true,
           audio: selectedAudioDevice ? {
-            deviceId: selectedAudioDevice,
+            deviceId: { exact: selectedAudioDevice },
             echoCancellation: true,
             noiseSuppression: true,
             sampleRate: 48000,
@@ -116,6 +130,7 @@ const RecordingModal = ({
 
         if (previewVideoRef.current) {
           previewVideoRef.current.srcObject = stream;
+          console.log('Preview updated with new devices');
         }
       } catch (error) {
         console.error('Error updating preview:', error);

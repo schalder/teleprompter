@@ -21,19 +21,21 @@ export const useMediaStream = () => {
       let stream: MediaStream | null = null;
 
       if (recordingType === "camera") {
-        // Define base constraints
+        // Define base constraints with exact values for mobile
         const videoConstraints: MediaTrackConstraints = {
           deviceId: selectedVideoDeviceId ? { exact: selectedVideoDeviceId } : undefined,
-          frameRate: { ideal: 30 }
+          frameRate: { exact: 30 }
         };
 
-        // Set resolution based on orientation
+        // Force exact dimensions based on orientation
         if (cameraResolution === "landscape") {
-          videoConstraints.width = { ideal: 1920 };
-          videoConstraints.height = { ideal: 1080 };
+          videoConstraints.width = { exact: 1920 };
+          videoConstraints.height = { exact: 1080 };
+          videoConstraints.aspectRatio = { exact: 16/9 };
         } else {
-          videoConstraints.width = { ideal: 1080 };
-          videoConstraints.height = { ideal: 1920 };
+          videoConstraints.width = { exact: 1080 };
+          videoConstraints.height = { exact: 1920 };
+          videoConstraints.aspectRatio = { exact: 9/16 };
         }
 
         const audioConstraints: MediaTrackConstraints = {
@@ -60,6 +62,18 @@ export const useMediaStream = () => {
         if (videoTrack) {
           const settings = videoTrack.getSettings();
           console.log('Active video track settings:', settings);
+          
+          // Verify if orientation matches requested
+          if (cameraResolution === "portrait" && settings.width && settings.height) {
+            if (settings.width > settings.height) {
+              console.warn('Warning: Video track orientation mismatch');
+              toast({
+                title: "Orientation Warning",
+                description: "Camera orientation may not match selected mode",
+                variant: "destructive",
+              });
+            }
+          }
         }
         
         if (audioTrack) {

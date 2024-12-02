@@ -9,6 +9,7 @@ interface TimelineSectionProps {
   onSeek: (value: number[]) => void;
   onReorder: (startIndex: number, endIndex: number) => void;
   onPreviewClip: (startTime: number) => void;
+  onDeleteClip: (clipId: string) => void;
 }
 
 export const TimelineSection = ({
@@ -18,6 +19,7 @@ export const TimelineSection = ({
   onSeek,
   onReorder,
   onPreviewClip,
+  onDeleteClip,
 }: TimelineSectionProps) => {
   return (
     <div className="p-4 bg-gray-800">
@@ -32,9 +34,7 @@ export const TimelineSection = ({
           clips={clips}
           onReorder={onReorder}
           onPreviewClip={onPreviewClip}
-          onDeleteClip={(clipId) => {
-            // This will be handled by the parent component
-          }}
+          onDeleteClip={onDeleteClip}
         />
       </div>
     </div>

@@ -16,7 +16,7 @@ const VideoEditor = () => {
   const { toast } = useToast();
   const [undoStack, setUndoStack] = useState<TimelineClip[][]>([]);
   const [redoStack, setRedoStack] = useState<TimelineClip[][]>([]);
-  
+
   const {
     isPlaying,
     currentTime,
@@ -48,14 +48,39 @@ const VideoEditor = () => {
     handleMuteToggle,
   } = useVideoEditor(videoRef);
 
+  const handleDeleteClip = (clipId: string) => {
+    const currentLayer = layers.find(l => l.type === 'video');
+    if (!currentLayer) return;
+
+    // Save current state for undo
+    setUndoStack(prev => [...prev, currentLayer.clips]);
+    setRedoStack([]); // Clear redo stack on new action
+
+    setLayers(prevLayers =>
+      prevLayers.map(layer => {
+        if (layer.type !== 'video') return layer;
+        return {
+          ...layer,
+          clips: layer.clips.filter(clip => clip.id !== clipId)
+        };
+      })
+    );
+
+    toast({
+      title: "Clip Deleted",
+      description: `Clip has been removed`,
+    });
+  };
+
   const handleDeleteRange = (start: number, end: number) => {
     if (!videoRef.current) return;
 
-    // Save current state for undo
     const currentLayer = layers.find(l => l.type === 'video');
-    if (currentLayer) {
-      setUndoStack(prev => [...prev, currentLayer.clips]);
-    }
+    if (!currentLayer) return;
+
+    // Save current state for undo
+    setUndoStack(prev => [...prev, currentLayer.clips]);
+    setRedoStack([]); // Clear redo stack on new action
 
     setLayers(prevLayers => {
       return prevLayers.map(layer => {
@@ -200,6 +225,7 @@ const VideoEditor = () => {
         onResizeChange={handleResizeChange}
         onSeek={value => handlePreviewClip(value[0])}
         onDeleteRange={handleDeleteRange}
+        onDeleteClip={handleDeleteClip}
         onReorder={(startIndex, endIndex) => {
           const currentLayer = layers.find(l => l.type === 'video');
           if (currentLayer) {

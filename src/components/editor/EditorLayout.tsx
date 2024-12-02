@@ -32,6 +32,7 @@ interface EditorLayoutProps {
   onSeek: (value: number[]) => void;
   onReorder: (startIndex: number, endIndex: number) => void;
   onPreviewClip: (startTime: number) => void;
+  onDeleteClip: (clipId: string) => void;
   onDeleteRange: (start: number, end: number) => void;
   clips: TimelineClip[];
 }
@@ -62,6 +63,7 @@ export const EditorLayout = ({
   onSeek,
   onReorder,
   onPreviewClip,
+  onDeleteClip,
   onDeleteRange,
   clips,
 }: EditorLayoutProps) => {
@@ -94,6 +96,7 @@ export const EditorLayout = ({
             onSeek={onSeek}
             onReorder={onReorder}
             onPreviewClip={onPreviewClip}
+            onDeleteClip={onDeleteClip}
           />
 
           <div className="mt-4">

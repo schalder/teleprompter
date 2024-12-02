@@ -56,17 +56,23 @@ export const useMediaStream = () => {
       }
 
       if (stream) {
-        // Create a video-only stream for preview and floating camera
-        const videoOnlyStream = new MediaStream(
-          stream.getVideoTracks()
-        );
-        
-        setPreviewStream(stream); // Keep full stream (with audio) only for recording
+        // Store full stream with audio for recording
+        setPreviewStream(stream);
+
+        // Create video-only streams for preview and floating camera
+        const videoOnlyStream = new MediaStream();
+        stream.getVideoTracks().forEach(track => {
+          videoOnlyStream.addTrack(track);
+        });
+
         if (previewVideoRef.current) {
-          previewVideoRef.current.srcObject = videoOnlyStream; // Use video-only stream for preview
+          previewVideoRef.current.srcObject = videoOnlyStream;
           previewVideoRef.current.muted = true;
           await previewVideoRef.current.play();
-          console.log('Preview started successfully');
+          console.log('Preview started with video-only stream:', {
+            videoTracks: videoOnlyStream.getVideoTracks().length,
+            audioTracks: videoOnlyStream.getAudioTracks().length
+          });
         }
       }
     } catch (error) {

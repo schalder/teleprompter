@@ -10,10 +10,11 @@ interface FloatingCameraProps {
 const FloatingCamera = ({ videoRef, isVisible, cameraResolution }: FloatingCameraProps) => {
   const { toast } = useToast();
   const hasAttemptedPlay = useRef(false);
+  const floatingVideoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
     const playVideo = async () => {
-      if (!videoRef.current) return;
+      if (!videoRef.current || !floatingVideoRef.current) return;
 
       try {
         const stream = videoRef.current.srcObject as MediaStream;
@@ -22,32 +23,40 @@ const FloatingCamera = ({ videoRef, isVisible, cameraResolution }: FloatingCamer
           return;
         }
 
+        // Create a new video-only stream for floating camera
+        const videoOnlyStream = new MediaStream();
+        stream.getVideoTracks().forEach(track => {
+          videoOnlyStream.addTrack(track);
+        });
+
         // Reset play attempt when stream changes
-        if (hasAttemptedPlay.current && videoRef.current.srcObject !== stream) {
+        if (hasAttemptedPlay.current && floatingVideoRef.current.srcObject !== videoOnlyStream) {
           hasAttemptedPlay.current = false;
         }
 
         if (!hasAttemptedPlay.current) {
           hasAttemptedPlay.current = true;
           
-          // Ensure video is completely muted
-          videoRef.current.muted = true;
-          videoRef.current.volume = 0;
+          floatingVideoRef.current.srcObject = videoOnlyStream;
+          floatingVideoRef.current.muted = true;
+          floatingVideoRef.current.volume = 0;
           
           // Wait for metadata to load first
-          if (videoRef.current.readyState === 0) {
+          if (floatingVideoRef.current.readyState === 0) {
             await new Promise<void>((resolve) => {
-              videoRef.current!.addEventListener('loadedmetadata', () => resolve(), { once: true });
+              floatingVideoRef.current!.addEventListener('loadedmetadata', () => resolve(), { once: true });
             });
           }
 
-          await videoRef.current.play();
+          await floatingVideoRef.current.play();
           console.log('Floating camera playing successfully', {
-            readyState: videoRef.current.readyState,
-            videoWidth: videoRef.current.videoWidth,
-            videoHeight: videoRef.current.videoHeight,
-            muted: videoRef.current.muted,
-            volume: videoRef.current.volume
+            readyState: floatingVideoRef.current.readyState,
+            videoWidth: floatingVideoRef.current.videoWidth,
+            videoHeight: floatingVideoRef.current.videoHeight,
+            muted: floatingVideoRef.current.muted,
+            volume: floatingVideoRef.current.volume,
+            videoTracks: videoOnlyStream.getVideoTracks().length,
+            audioTracks: videoOnlyStream.getAudioTracks().length
           });
         }
       } catch (error) {
@@ -65,8 +74,9 @@ const FloatingCamera = ({ videoRef, isVisible, cameraResolution }: FloatingCamer
     }
 
     return () => {
-      if (videoRef.current) {
-        videoRef.current.pause();
+      if (floatingVideoRef.current) {
+        floatingVideoRef.current.pause();
+        floatingVideoRef.current.srcObject = null;
       }
       hasAttemptedPlay.current = false;
     };
@@ -82,10 +92,10 @@ const FloatingCamera = ({ videoRef, isVisible, cameraResolution }: FloatingCamer
     <div className={`fixed bottom-4 right-4 z-[100] ${containerClasses} rounded-2xl overflow-hidden shadow-lg`}>
       <div className="relative w-full h-full">
         <video
-          ref={videoRef}
+          ref={floatingVideoRef}
           autoPlay
           playsInline
-          muted={true}
+          muted
           className="absolute inset-0 w-full h-full object-cover [transform:scaleX(-1)]"
         />
         <div 

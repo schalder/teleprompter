@@ -60,26 +60,51 @@ export const useRecording = () => {
         });
       }
 
-      // Enhanced stream readiness check with longer timeout
+      // Enhanced stream readiness check with comprehensive validation
       await new Promise((resolve, reject) => {
         const videoTrack = finalStream.getVideoTracks()[0];
         const audioTrack = finalStream.getAudioTracks()[0];
         
-        console.log('Checking stream readiness...');
+        console.log('Starting stream validation...');
         console.log('Video track state:', videoTrack.readyState);
         console.log('Audio track state:', audioTrack?.readyState);
+        console.log('Video track settings:', videoTrack.getSettings());
 
-        // Function to check if stream is ready
+        // Function to check if stream is fully ready
         const isStreamReady = () => {
-          return videoTrack.readyState === 'live' && (!audioTrack || audioTrack.readyState === 'live');
+          if (!videoTrack || videoTrack.readyState !== 'live') return false;
+          if (audioTrack && audioTrack.readyState !== 'live') return false;
+
+          const settings = videoTrack.getSettings();
+          return settings.width && settings.height && // Has dimensions
+                 settings.frameRate && // Has framerate
+                 videoTrack.enabled && // Is enabled
+                 finalStream.active; // Stream is active
         };
 
         // Initial check
         if (isStreamReady()) {
-          console.log('Stream is ready immediately');
+          console.log('Stream is ready immediately with settings:', videoTrack.getSettings());
           resolve(true);
           return;
         }
+
+        let frameCount = 0;
+        const imageCapture = new ImageCapture(videoTrack);
+        
+        // Set up frame checking
+        const checkFrame = async () => {
+          try {
+            const frame = await imageCapture.grabFrame();
+            frameCount++;
+            console.log(`Frame ${frameCount} captured: ${frame.width}x${frame.height}`);
+            frame.close();
+            return true;
+          } catch (error) {
+            console.log('Frame capture failed:', error);
+            return false;
+          }
+        };
 
         // Set up a longer timeout for stream initialization
         const timeout = setTimeout(() => {
@@ -87,8 +112,8 @@ export const useRecording = () => {
         }, 10000); // 10 seconds timeout
 
         // Set up periodic checks
-        const checkInterval = setInterval(() => {
-          if (isStreamReady()) {
+        const checkInterval = setInterval(async () => {
+          if (await checkFrame() && isStreamReady()) {
             clearInterval(checkInterval);
             clearTimeout(timeout);
             console.log('Stream became ready during interval check');
@@ -104,8 +129,8 @@ export const useRecording = () => {
         };
 
         // Additional track event listeners
-        videoTrack.onunmute = () => {
-          if (isStreamReady()) {
+        videoTrack.onunmute = async () => {
+          if (await checkFrame() && isStreamReady()) {
             clearInterval(checkInterval);
             clearTimeout(timeout);
             console.log('Stream became ready on unmute');
@@ -114,14 +139,17 @@ export const useRecording = () => {
         };
       });
 
-      // Additional stabilization delay
-      console.log('Waiting for stream stabilization...');
+      // Additional stabilization delay with active checking
+      console.log('Starting final stream stabilization...');
       await new Promise(resolve => setTimeout(resolve, 1000));
 
-      // Verify stream is still valid
-      if (!finalStream.active) {
-        throw new Error('Stream became inactive during stabilization');
+      // Final verification
+      const videoTrack = finalStream.getVideoTracks()[0];
+      if (!finalStream.active || !videoTrack || videoTrack.readyState !== 'live') {
+        throw new Error('Stream failed final validation check');
       }
+
+      console.log('Stream passed all validation checks');
 
       const options = {
         mimeType: 'video/webm;codecs=h264,opus',

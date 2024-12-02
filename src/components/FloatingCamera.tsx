@@ -33,10 +33,8 @@ const FloatingCamera = ({ videoRef, isVisible, cameraResolution }: FloatingCamer
     ? "w-[135px] h-[240px]"  // Portrait dimensions (9:16 ratio)
     : "w-[240px] h-[135px]"; // Landscape dimensions (16:9 ratio)
 
-  // Adjust video styles based on orientation
-  const videoClasses = `w-full h-full object-contain [transform:scaleX(-1)] ${
-    cameraResolution === "portrait" ? "object-contain" : "object-cover"
-  }`;
+  // Simplified video classes with consistent object-fit behavior
+  const videoClasses = `w-full h-full object-cover [transform:scaleX(-1)]`;
 
   console.log('Floating camera rendering with resolution:', cameraResolution);
   console.log('Container classes:', containerClasses);
@@ -45,7 +43,7 @@ const FloatingCamera = ({ videoRef, isVisible, cameraResolution }: FloatingCamer
 
   return (
     <div 
-      className={`fixed bottom-4 right-4 z-50 ${containerClasses} bg-gray-900 rounded-lg overflow-hidden shadow-lg border border-gray-700 flex items-center justify-center`}
+      className={`fixed bottom-4 right-4 z-50 ${containerClasses} bg-gray-900 rounded-lg overflow-hidden shadow-lg border border-gray-700`}
     >
       <video
         ref={videoRef}

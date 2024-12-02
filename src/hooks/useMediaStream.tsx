@@ -1,15 +1,11 @@
 import { useState, useRef, useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
-import { useAudioDevices } from "./useAudioDevices";
-import { useVideoDevices } from "./useVideoDevices";
 
 export const useMediaStream = () => {
   const [previewStream, setPreviewStream] = useState<MediaStream | null>(null);
   const { toast } = useToast();
   const previewVideoRef = useRef<HTMLVideoElement | null>(null);
   const screenCaptureStream = useRef<MediaStream | null>(null);
-  const { getAudioDevices } = useAudioDevices();
-  const { getVideoDevices } = useVideoDevices();
 
   const startPreview = async (
     recordingType: "camera" | "screen",
@@ -25,21 +21,19 @@ export const useMediaStream = () => {
       let stream: MediaStream | null = null;
 
       if (recordingType === "camera") {
-        const constraints = {
+        const constraints: MediaStreamConstraints = {
           video: {
             deviceId: selectedVideoDeviceId ? { exact: selectedVideoDeviceId } : undefined,
             width: { ideal: cameraResolution === "landscape" ? 1920 : 1080 },
             height: { ideal: cameraResolution === "landscape" ? 1080 : 1920 },
             frameRate: { ideal: 30 },
-            facingMode: "user",
           },
           audio: selectedAudioDeviceId ? {
             deviceId: { exact: selectedAudioDeviceId },
             echoCancellation: true,
             noiseSuppression: true,
             sampleRate: 48000,
-            channelCount: 2,
-          } : false, // Don't capture audio if no device selected
+          } : true
         };
 
         console.log('Requesting media with constraints:', JSON.stringify(constraints, null, 2));
@@ -64,7 +58,6 @@ export const useMediaStream = () => {
             echoCancellation: true,
             noiseSuppression: true,
             sampleRate: 48000,
-            channelCount: 2,
           } : true
         });
         screenCaptureStream.current = stream;

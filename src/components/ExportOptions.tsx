@@ -7,6 +7,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { toast } from '@/hooks/use-toast';
 
 interface ExportOptionsProps {
   onExport: (format: string, quality: string) => void;
@@ -15,7 +16,10 @@ interface ExportOptionsProps {
 export const ExportOptions = ({ onExport }: ExportOptionsProps) => {
   const handleExport = (format: string) => {
     onExport(format, 'high');
-    // You would implement actual export logic here
+    toast({
+      title: "Export Started",
+      description: `Exporting video as ${format.toUpperCase()}`,
+    });
   };
 
   return (
@@ -39,7 +43,17 @@ export const ExportOptions = ({ onExport }: ExportOptionsProps) => {
               <SelectItem value="gif">GIF</SelectItem>
             </SelectContent>
           </Select>
-          <Button>
+          <Select defaultValue="high">
+            <SelectTrigger className="w-32">
+              <SelectValue placeholder="Quality" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="high">High</SelectItem>
+              <SelectItem value="medium">Medium</SelectItem>
+              <SelectItem value="low">Low</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button onClick={() => handleExport('mp4')}>
             <Download className="w-4 h-4 mr-2" />
             Export
           </Button>

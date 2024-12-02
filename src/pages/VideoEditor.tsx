@@ -43,31 +43,28 @@ const VideoEditor = () => {
     }
   }, [videoUrl, navigate]);
 
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
+  const handleVolumeChangeArray = (values: number[]) => {
+    setVolume(values[0]);
+    if (videoRef.current) {
+      videoRef.current.volume = values[0];
+    }
+  };
 
-    const handleLoadedMetadata = () => {
-      setDuration(video.duration);
-      setLayers(prevLayers => 
-        prevLayers.map(layer => 
-          layer.id === '1' 
-            ? {
-                ...layer,
-                clips: [{
-                  id: nanoid(),
-                  startTime: 0,
-                  endTime: video.duration
-                }]
-              }
-            : layer
-        )
-      );
-    };
+  const handleCropChange = (crop: { x: number; y: number; width: number; height: number }) => {
+    if (videoRef.current) {
+      const video = videoRef.current;
+      video.style.objectPosition = `-${crop.x}% -${crop.y}%`;
+      video.style.width = `${crop.width}%`;
+      video.style.height = `${crop.height}%`;
+    }
+  };
 
-    video.addEventListener('loadedmetadata', handleLoadedMetadata);
-    return () => video.removeEventListener('loadedmetadata', handleLoadedMetadata);
-  }, [setDuration, setLayers]);
+  const handleResizeChange = (dimensions: { width: number; height: number }) => {
+    if (videoRef.current) {
+      videoRef.current.style.maxWidth = `${dimensions.width}px`;
+      videoRef.current.style.maxHeight = `${dimensions.height}px`;
+    }
+  };
 
   const togglePlayPause = () => {
     if (videoRef.current) {
@@ -196,13 +193,6 @@ const VideoEditor = () => {
     }
   };
 
-  const handleVolumeChangeArray = (values: number[]) => {
-    setVolume(values[0]);
-    if (videoRef.current) {
-      videoRef.current.volume = values[0];
-    }
-  };
-
   return (
     <div className="min-h-screen bg-gray-900 text-white">
       <KeyboardShortcuts
@@ -242,6 +232,8 @@ const VideoEditor = () => {
                 onAddLayer={handleAddLayer}
                 onVolumeChange={handleVolumeChange}
                 onMuteToggle={handleMuteToggle}
+                onCropChange={handleCropChange}
+                onResizeChange={handleResizeChange}
               />
             </div>
 

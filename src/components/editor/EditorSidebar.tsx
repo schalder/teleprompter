@@ -1,6 +1,7 @@
 import { VideoEffects } from '../VideoEffects';
 import { VideoLayers } from '../VideoLayers';
 import { ExportOptions } from '../ExportOptions';
+import { CropResizeControls } from './CropResizeControls';
 import { Layer } from '@/types/editor';
 
 interface EditorSidebarProps {
@@ -11,6 +12,8 @@ interface EditorSidebarProps {
   onAddLayer: (type: 'video' | 'audio') => void;
   onVolumeChange: (layerId: string, volume: number) => void;
   onMuteToggle: (layerId: string) => void;
+  onCropChange: (crop: { x: number; y: number; width: number; height: number }) => void;
+  onResizeChange: (dimensions: { width: number; height: number }) => void;
 }
 
 export const EditorSidebar = ({
@@ -21,10 +24,16 @@ export const EditorSidebar = ({
   onAddLayer,
   onVolumeChange,
   onMuteToggle,
+  onCropChange,
+  onResizeChange,
 }: EditorSidebarProps) => {
   return (
     <div className="bg-gray-800 p-4 rounded-lg space-y-4">
       <ExportOptions onExport={onExport} />
+      <CropResizeControls
+        onCropChange={onCropChange}
+        onResizeChange={onResizeChange}
+      />
       <VideoEffects onEffectChange={onEffectChange} />
       <VideoLayers
         layers={layers}

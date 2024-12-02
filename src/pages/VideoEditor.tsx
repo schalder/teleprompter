@@ -1,5 +1,5 @@
-import React, { useRef } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import React, { useRef, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { KeyboardShortcuts } from '@/components/KeyboardShortcuts';
 import { useVideoControls } from '@/hooks/useVideoControls';
 import { useVideoEffects } from '@/hooks/useVideoEffects';
@@ -7,13 +7,15 @@ import { useVideoEditor } from '@/hooks/useVideoEditor';
 import { EditorLayout } from '@/components/editor/EditorLayout';
 import { nanoid } from 'nanoid';
 import { useToast } from '@/hooks/use-toast';
+import { Layer, TimelineClip } from '@/types/editor';
 
 const VideoEditor = () => {
   const location = useLocation();
-  const navigate = useNavigate();
   const videoUrl = location.state?.videoUrl;
   const videoRef = useRef<HTMLVideoElement>(null);
   const { toast } = useToast();
+  const [undoStack, setUndoStack] = useState<TimelineClip[][]>([]);
+  const [redoStack, setRedoStack] = useState<TimelineClip[][]>([]);
   
   const {
     isPlaying,
@@ -46,9 +48,84 @@ const VideoEditor = () => {
     handleMuteToggle,
   } = useVideoEditor(videoRef);
 
+  const handleDeleteRange = (start: number, end: number) => {
+    if (!videoRef.current) return;
+
+    // Save current state for undo
+    const currentLayer = layers.find(l => l.type === 'video');
+    if (currentLayer) {
+      setUndoStack(prev => [...prev, currentLayer.clips]);
+    }
+
+    setLayers(prevLayers => {
+      return prevLayers.map(layer => {
+        if (layer.type !== 'video') return layer;
+
+        const newClips = layer.clips.filter(clip => 
+          clip.startTime >= end || clip.endTime <= start
+        );
+
+        return {
+          ...layer,
+          clips: newClips
+        };
+      });
+    });
+  };
+
+  const handleUndo = () => {
+    if (undoStack.length === 0) return;
+    
+    const previousClips = undoStack[undoStack.length - 1];
+    setUndoStack(prev => prev.slice(0, -1));
+    
+    // Save current state for redo
+    const currentLayer = layers.find(l => l.type === 'video');
+    if (currentLayer) {
+      setRedoStack(prev => [...prev, currentLayer.clips]);
+    }
+
+    setLayers(prevLayers => 
+      prevLayers.map(layer => 
+        layer.type === 'video' 
+          ? { ...layer, clips: previousClips }
+          : layer
+      )
+    );
+  };
+
+  const handleRedo = () => {
+    if (redoStack.length === 0) return;
+    
+    const nextClips = redoStack[redoStack.length - 1];
+    setRedoStack(prev => prev.slice(0, -1));
+    
+    // Save current state for undo
+    const currentLayer = layers.find(l => l.type === 'video');
+    if (currentLayer) {
+      setUndoStack(prev => [...prev, currentLayer.clips]);
+    }
+
+    setLayers(prevLayers => 
+      prevLayers.map(layer => 
+        layer.type === 'video' 
+          ? { ...layer, clips: nextClips }
+          : layer
+      )
+    );
+  };
+
   const handleSplitAtCurrentTime = () => {
     if (!videoRef.current) return;
     const splitTime = videoRef.current.currentTime;
+
+    // Save current state for undo
+    const currentLayer = layers.find(l => l.type === 'video');
+    if (currentLayer) {
+      setUndoStack(prev => [...prev, currentLayer.clips]);
+      setRedoStack([]); // Clear redo stack on new action
+    }
+
     setLayers(prevLayers => {
       return prevLayers.map(layer => {
         if (layer.type !== 'video') return layer;
@@ -84,26 +161,13 @@ const VideoEditor = () => {
     });
   };
 
-  const handleClipReorder = (startIndex: number, endIndex: number) => {
-    setLayers(prevLayers => 
-      prevLayers.map(layer => {
-        if (layer.type !== 'video') return layer;
-        
-        const newClips = [...layer.clips];
-        const [removed] = newClips.splice(startIndex, 1);
-        newClips.splice(endIndex, 0, removed);
-        return { ...layer, clips: newClips };
-      })
-    );
-  };
-
   return (
     <div className="min-h-screen bg-gray-900 text-white">
       <KeyboardShortcuts
         onPlayPause={togglePlayPause}
         onSplit={handleSplitAtCurrentTime}
-        onUndo={() => {}}
-        onRedo={() => {}}
+        onUndo={handleUndo}
+        onRedo={handleRedo}
       />
       
       <EditorLayout
@@ -130,8 +194,11 @@ const VideoEditor = () => {
         onCropChange={handleCropChange}
         onResizeChange={handleResizeChange}
         onSeek={value => handlePreviewClip(value[0])}
-        onReorder={handleClipReorder}
-        onPreviewClip={handlePreviewClip}
+        onDeleteRange={handleDeleteRange}
+        onUndo={handleUndo}
+        onRedo={handleRedo}
+        undoable={undoStack.length > 0}
+        redoable={redoStack.length > 0}
         clips={layers.find(l => l.type === 'video')?.clips || []}
       />
     </div>

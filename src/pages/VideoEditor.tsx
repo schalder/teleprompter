@@ -2,13 +2,14 @@ import React, { useRef, useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 import { KeyboardShortcuts } from '@/components/KeyboardShortcuts';
-import { TimelineClip } from '@/types/editor';
+import { TimelineClip, Layer } from '@/types/editor';
 import { useToast } from '@/hooks/use-toast';
 import { EditorHeader } from '@/components/editor/EditorHeader';
 import { VideoPreview } from '@/components/editor/VideoPreview';
 import { EditorSidebar } from '@/components/editor/EditorSidebar';
 import { TimelineSection } from '@/components/editor/TimelineSection';
 import { VideoSplitControls } from '@/components/editor/VideoSplitControls';
+import { LayerManager } from '@/components/editor/LayerManager';
 import { nanoid } from 'nanoid';
 
 const VideoEditor = () => {
@@ -19,11 +20,16 @@ const VideoEditor = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [clips, setClips] = useState<TimelineClip[]>([]);
   const [volume, setVolume] = useState(1);
   const [isMuted, setIsMuted] = useState(false);
-  const [layers, setLayers] = useState([
-    { id: '1', name: 'Main Video', visible: true },
+  const [layers, setLayers] = useState<Layer[]>([
+    {
+      id: '1',
+      name: 'Main Video',
+      visible: true,
+      type: 'video',
+      clips: []
+    }
   ]);
   const { toast } = useToast();
 
@@ -39,11 +45,20 @@ const VideoEditor = () => {
 
     const handleLoadedMetadata = () => {
       setDuration(video.duration);
-      setClips([{
-        id: nanoid(),
-        startTime: 0,
-        endTime: video.duration
-      }]);
+      setLayers(prevLayers => 
+        prevLayers.map(layer => 
+          layer.id === '1' 
+            ? {
+                ...layer,
+                clips: [{
+                  id: nanoid(),
+                  startTime: 0,
+                  endTime: video.duration
+                }]
+              }
+            : layer
+        )
+      );
     };
 
     video.addEventListener('loadedmetadata', handleLoadedMetadata);
@@ -80,42 +95,48 @@ const VideoEditor = () => {
     if (!videoRef.current) return;
 
     const splitTime = videoRef.current.currentTime;
-    setClips(prevClips => {
-      const affectedClipIndex = prevClips.findIndex(
-        clip => splitTime > clip.startTime && splitTime < clip.endTime
-      );
+    setLayers(prevLayers => {
+      return prevLayers.map(layer => {
+        if (layer.type !== 'video') return layer;
 
-      if (affectedClipIndex === -1) {
-        toast({
-          title: "Cannot split here",
-          description: "Please select a valid position within a clip to split.",
-          variant: "destructive",
+        const newClips = layer.clips.flatMap(clip => {
+          if (splitTime > clip.startTime && splitTime < clip.endTime) {
+            return [
+              {
+                id: nanoid(),
+                startTime: clip.startTime,
+                endTime: splitTime
+              },
+              {
+                id: nanoid(),
+                startTime: splitTime,
+                endTime: clip.endTime
+              }
+            ];
+          }
+          return [clip];
         });
-        return prevClips;
-      }
 
-      const affectedClip = prevClips[affectedClipIndex];
-      const newClips = [...prevClips];
-      
-      newClips.splice(affectedClipIndex, 1, 
-        {
-          id: nanoid(),
-          startTime: affectedClip.startTime,
-          endTime: splitTime
-        },
-        {
-          id: nanoid(),
-          startTime: splitTime,
-          endTime: affectedClip.endTime
-        }
-      );
+        return {
+          ...layer,
+          clips: newClips
+        };
+      });
+    });
 
-      return newClips;
+    toast({
+      title: "Clip Split",
+      description: `Video split at ${splitTime.toFixed(2)} seconds`,
     });
   };
 
   const handleDeleteClip = (clipId: string) => {
-    setClips(prevClips => prevClips.filter(clip => clip.id !== clipId));
+    setLayers(prevLayers => 
+      prevLayers.map(layer => ({
+        ...layer,
+        clips: layer.clips.filter(clip => clip.id !== clipId)
+      }))
+    );
   };
 
   const handleVolumeChange = (value: number[]) => {
@@ -133,18 +154,6 @@ const VideoEditor = () => {
       videoRef.current.muted = newMutedState;
       setIsMuted(newMutedState);
     }
-  };
-
-  const handleToggleLayer = (id: string) => {
-    setLayers(prevLayers =>
-      prevLayers.map(layer =>
-        layer.id === id ? { ...layer, visible: !layer.visible } : layer
-      )
-    );
-    toast({
-      title: "Layer visibility toggled",
-      description: `Layer ${id} visibility updated`,
-    });
   };
 
   const handleEffectChange = (effect: string, value: number) => {
@@ -174,16 +183,19 @@ const VideoEditor = () => {
       title: "Export Started",
       description: `Exporting video as ${format.toUpperCase()} (${quality} quality)`,
     });
-    // Implement actual export logic here
   };
 
   const handleClipReorder = (startIndex: number, endIndex: number) => {
-    setClips(prevClips => {
-      const newClips = [...prevClips];
-      const [removed] = newClips.splice(startIndex, 1);
-      newClips.splice(endIndex, 0, removed);
-      return newClips;
-    });
+    setLayers(prevLayers => 
+      prevLayers.map(layer => {
+        if (layer.type !== 'video') return layer;
+        
+        const newClips = [...layer.clips];
+        const [removed] = newClips.splice(startIndex, 1);
+        newClips.splice(endIndex, 0, removed);
+        return { ...layer, clips: newClips };
+      })
+    );
   };
 
   const handlePreviewClip = (startTime: number) => {
@@ -237,12 +249,27 @@ const VideoEditor = () => {
                 onMuteToggle={handleMuteToggle}
               />
 
-              <EditorSidebar
-                layers={layers}
-                onToggleLayer={handleToggleLayer}
-                onEffectChange={handleEffectChange}
-                onExport={handleExport}
-              />
+              <div className="space-y-4">
+                <EditorSidebar
+                  layers={layers}
+                  onToggleLayer={(id) => {
+                    const layer = layers.find(l => l.id === id);
+                    if (layer) {
+                      setLayers(prevLayers =>
+                        prevLayers.map(l =>
+                          l.id === id ? { ...l, visible: !l.visible } : l
+                        )
+                      );
+                    }
+                  }}
+                  onEffectChange={handleEffectChange}
+                  onExport={handleExport}
+                />
+                <LayerManager
+                  layers={layers}
+                  onLayersChange={setLayers}
+                />
+              </div>
             </div>
 
             <div className="mt-4">
@@ -260,7 +287,7 @@ const VideoEditor = () => {
           <TimelineSection
             currentTime={currentTime}
             duration={duration}
-            clips={clips}
+            clips={layers.find(l => l.type === 'video')?.clips || []}
             onSeek={value => handlePreviewClip(value[0])}
             onReorder={handleClipReorder}
             onPreviewClip={handlePreviewClip}

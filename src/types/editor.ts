@@ -8,6 +8,10 @@ export interface Layer {
   id: string;
   name: string;
   visible: boolean;
+  type: 'video' | 'audio';
+  clips: TimelineClip[];
+  volume?: number;
+  muted?: boolean;
 }
 
 export interface VideoEffect {

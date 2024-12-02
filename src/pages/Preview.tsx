@@ -1,7 +1,6 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Download, RotateCcw, ExternalLink, Edit2 } from "lucide-react";
-import { useState } from "react";
+import { Download, RotateCcw, ExternalLink } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 
 const Preview = () => {
@@ -36,10 +35,6 @@ const Preview = () => {
       });
   };
 
-  const handleEdit = () => {
-    navigate('/editor', { state: { videoUrl } });
-  };
-
   return (
     <div className="min-h-screen bg-gray-900 text-white p-4 sm:p-6">
       <div className="max-w-4xl mx-auto space-y-6">
@@ -63,15 +58,6 @@ const Preview = () => {
               >
                 <Download className="w-4 h-4 mr-2" />
                 Download Recording
-              </Button>
-              
-              <Button 
-                variant="secondary"
-                onClick={handleEdit}
-                className="w-full sm:w-auto"
-              >
-                <Edit2 className="w-4 h-4 mr-2" />
-                Edit Video
               </Button>
               
               <Button 

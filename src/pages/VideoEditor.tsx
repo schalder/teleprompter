@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { KeyboardShortcuts } from '@/components/KeyboardShortcuts';
 import { useVideoControls } from '@/hooks/useVideoControls';
@@ -6,12 +6,14 @@ import { useVideoEffects } from '@/hooks/useVideoEffects';
 import { useVideoEditor } from '@/hooks/useVideoEditor';
 import { EditorLayout } from '@/components/editor/EditorLayout';
 import { nanoid } from 'nanoid';
+import { useToast } from '@/hooks/use-toast';
 
 const VideoEditor = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const videoUrl = location.state?.videoUrl;
   const videoRef = useRef<HTMLVideoElement>(null);
+  const { toast } = useToast();
   
   const {
     isPlaying,
@@ -37,17 +39,12 @@ const VideoEditor = () => {
 
   const {
     layers,
+    setLayers,
     handleToggleLayer,
     handleAddLayer,
     handleVolumeChange,
     handleMuteToggle,
   } = useVideoEditor(videoRef);
-
-  useEffect(() => {
-    if (!videoUrl) {
-      navigate('/');
-    }
-  }, [videoUrl, navigate]);
 
   const handleSplitAtCurrentTime = () => {
     if (!videoRef.current) return;

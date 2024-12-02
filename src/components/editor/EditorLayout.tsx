@@ -81,7 +81,7 @@ export const EditorLayout = ({
             onReset={onReset}
             onSplit={onSplit}
             onTimeUpdate={onTimeUpdate}
-            onEnded={() => !onPlayPause()}
+            onEnded={onPlayPause}
             onVolumeChange={onVolumeChange}
             onMuteToggle={onMuteToggle}
           />

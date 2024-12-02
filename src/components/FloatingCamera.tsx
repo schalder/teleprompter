@@ -102,7 +102,6 @@ const FloatingCamera = ({ videoRef, isVisible, cameraResolution }: FloatingCamer
           autoPlay
           playsInline
           muted={true}
-          defaultMuted={true}
           className="absolute inset-0 w-full h-full object-cover [transform:scaleX(-1)]"
         />
         <div 

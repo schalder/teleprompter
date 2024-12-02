@@ -8,6 +8,9 @@ interface EditorSidebarProps {
   onToggleLayer: (id: string) => void;
   onEffectChange: (effect: string, value: number) => void;
   onExport: (format: string, quality: string) => void;
+  onAddLayer: (type: 'video' | 'audio') => void;
+  onVolumeChange: (layerId: string, volume: number) => void;
+  onMuteToggle: (layerId: string) => void;
 }
 
 export const EditorSidebar = ({
@@ -15,6 +18,9 @@ export const EditorSidebar = ({
   onToggleLayer,
   onEffectChange,
   onExport,
+  onAddLayer,
+  onVolumeChange,
+  onMuteToggle,
 }: EditorSidebarProps) => {
   return (
     <div className="bg-gray-800 p-4 rounded-lg space-y-4">
@@ -23,6 +29,9 @@ export const EditorSidebar = ({
       <VideoLayers
         layers={layers}
         onToggleLayer={onToggleLayer}
+        onAddLayer={onAddLayer}
+        onVolumeChange={onVolumeChange}
+        onMuteToggle={onMuteToggle}
       />
     </div>
   );

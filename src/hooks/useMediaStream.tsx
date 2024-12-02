@@ -56,14 +56,14 @@ export const useMediaStream = () => {
       }
 
       if (stream) {
-        // Create a video-only stream for preview
+        // Create a video-only stream for preview and floating camera
         const videoOnlyStream = new MediaStream(
           stream.getVideoTracks()
         );
         
-        setPreviewStream(stream); // Keep full stream for recording
+        setPreviewStream(stream); // Keep full stream (with audio) only for recording
         if (previewVideoRef.current) {
-          previewVideoRef.current.srcObject = videoOnlyStream;
+          previewVideoRef.current.srcObject = videoOnlyStream; // Use video-only stream for preview
           previewVideoRef.current.muted = true;
           await previewVideoRef.current.play();
           console.log('Preview started successfully');

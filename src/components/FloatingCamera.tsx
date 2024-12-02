@@ -12,46 +12,30 @@ const FloatingCamera = ({ videoRef, isVisible, cameraResolution }: FloatingCamer
 
   useEffect(() => {
     const playVideo = async () => {
-      if (!videoRef.current) {
-        console.log('Video ref not available');
-        return;
-      }
+      if (!videoRef.current) return;
 
       try {
-        // Check if we have a valid stream
         const stream = videoRef.current.srcObject as MediaStream;
-        
         if (!stream) {
-          console.log('No stream available for floating camera');
+          console.error('No stream available for floating camera');
           return;
         }
 
-        // Log stream details for debugging
-        const videoTracks = stream.getVideoTracks();
-        console.log('Stream video tracks:', videoTracks.map(track => ({
-          id: track.id,
-          label: track.label,
-          enabled: track.enabled,
-          settings: track.getSettings()
-        })));
-
-        // Ensure video is ready to play
-        if (videoRef.current.readyState >= 2) {
-          await videoRef.current.play();
-          console.log('Floating camera playing successfully');
-        } else {
-          console.log('Video not ready to play, waiting for loadeddata event');
-          await new Promise((resolve) => {
-            videoRef.current!.addEventListener('loadeddata', resolve, { once: true });
+        // Wait for video to be ready
+        if (videoRef.current.readyState < 2) {
+          await new Promise<void>((resolve) => {
+            const handleLoadedData = () => {
+              console.log('Video loaded and ready to play');
+              resolve();
+            };
+            videoRef.current!.addEventListener('loadeddata', handleLoadedData, { once: true });
           });
-          await videoRef.current.play();
         }
 
-        // Log final video element state
-        console.log('Video element state:', {
+        // Now try to play
+        await videoRef.current.play();
+        console.log('Floating camera playing successfully', {
           readyState: videoRef.current.readyState,
-          paused: videoRef.current.paused,
-          currentTime: videoRef.current.currentTime,
           videoWidth: videoRef.current.videoWidth,
           videoHeight: videoRef.current.videoHeight
         });
@@ -67,21 +51,22 @@ const FloatingCamera = ({ videoRef, isVisible, cameraResolution }: FloatingCamer
     };
 
     if (isVisible && videoRef.current?.srcObject) {
-      // Give the DOM a moment to be ready
-      requestAnimationFrame(() => {
-        playVideo();
-      });
+      playVideo();
     }
+
+    // Cleanup
+    return () => {
+      if (videoRef.current) {
+        videoRef.current.pause();
+      }
+    };
   }, [videoRef.current?.srcObject, isVisible, toast]);
 
-  if (!isVisible) {
-    return null;
-  }
+  if (!isVisible) return null;
 
-  // Adjust dimensions based on resolution
   const containerClasses = cameraResolution === "portrait"
-    ? "w-[135px] h-[240px]"  // Portrait dimensions (9:16 ratio)
-    : "w-[240px] h-[135px]"; // Landscape dimensions (16:9 ratio)
+    ? "w-[135px] h-[240px]"
+    : "w-[240px] h-[135px]";
 
   return (
     <div className={`fixed bottom-4 right-4 z-[100] ${containerClasses} rounded-2xl overflow-hidden shadow-lg`}>

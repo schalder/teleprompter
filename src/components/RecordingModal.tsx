@@ -1,13 +1,12 @@
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Label } from "@/components/ui/label";
-import { Camera, Monitor } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useState, useEffect } from "react";
 import DeviceSelector from "./DeviceSelector";
 import ResolutionSelector from "./ResolutionSelector";
 import { useToast } from "./ui/use-toast";
+import VideoPreview from "./VideoPreview";
+import RecordingTypeSelector from "./RecordingTypeSelector";
 
 interface RecordingModalProps {
   isOpen: boolean;
@@ -61,11 +60,6 @@ const RecordingModal = ({
         const defaultDevice = videoInputs[0];
         console.log('Setting default video device:', defaultDevice.label);
         setSelectedVideoDevice(defaultDevice.deviceId);
-      }
-      if (!selectedAudioDevice && audioInputs.length > 0) {
-        const defaultDevice = audioInputs[0];
-        console.log('Setting default audio device:', defaultDevice.label);
-        setSelectedAudioDevice(defaultDevice.deviceId);
       }
     } catch (error) {
       console.error('Error accessing media devices:', error);
@@ -133,6 +127,15 @@ const RecordingModal = ({
 
         if (previewVideoRef.current) {
           previewVideoRef.current.srcObject = stream;
+          await previewVideoRef.current.play().catch(e => {
+            console.error('Error playing video:', e);
+            toast({
+              variant: "destructive",
+              title: "Preview Error",
+              description: "Failed to play video preview. Please check your camera permissions.",
+            });
+          });
+          
           console.log('Preview updated with new devices');
           
           // Verify audio device
@@ -165,33 +168,10 @@ const RecordingModal = ({
             <div className="space-y-6 p-6">
               <p className="text-gray-400 text-center">Choose what you want to record</p>
 
-              <RadioGroup
-                value={recordingType}
-                onValueChange={(value: "camera" | "screen") => setRecordingType(value)}
-                className="grid grid-cols-1 gap-4"
-              >
-                <div className="flex items-center space-x-4 p-4 rounded-lg border border-gray-700 hover:bg-gray-800 cursor-pointer">
-                  <RadioGroupItem value="camera" id="camera" className="border-white text-white" />
-                  <Label htmlFor="camera" className="flex items-center space-x-3 cursor-pointer">
-                    <Camera className="w-5 h-5" />
-                    <div>
-                      <div className="font-medium">Camera Only</div>
-                      <div className="text-sm text-gray-400">Record yourself using your webcam</div>
-                    </div>
-                  </Label>
-                </div>
-
-                <div className="flex items-center space-x-4 p-4 rounded-lg border border-gray-700 hover:bg-gray-800 cursor-pointer">
-                  <RadioGroupItem value="screen" id="screen" className="border-white text-white" />
-                  <Label htmlFor="screen" className="flex items-center space-x-3 cursor-pointer">
-                    <Monitor className="w-5 h-5" />
-                    <div>
-                      <div className="font-medium">Screen Only</div>
-                      <div className="text-sm text-gray-400">Record your screen</div>
-                    </div>
-                  </Label>
-                </div>
-              </RadioGroup>
+              <RecordingTypeSelector
+                recordingType={recordingType}
+                setRecordingType={setRecordingType}
+              />
 
               {recordingType === "camera" && (
                 <>
@@ -219,15 +199,10 @@ const RecordingModal = ({
               )}
 
               {isPreviewActive && (
-                <div className={`relative ${cameraResolution === "portrait" ? "w-[240px] h-[427px]" : "w-full aspect-video"} mx-auto bg-gray-800 rounded-lg overflow-hidden`}>
-                  <video
-                    ref={previewVideoRef}
-                    autoPlay
-                    playsInline
-                    muted
-                    className="w-full h-full object-cover [transform:scaleX(-1)]"
-                  />
-                </div>
+                <VideoPreview
+                  previewVideoRef={previewVideoRef}
+                  cameraResolution={cameraResolution}
+                />
               )}
             </div>
           </ScrollArea>

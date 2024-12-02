@@ -32,6 +32,9 @@ export const TimelineSection = ({
           clips={clips}
           onReorder={onReorder}
           onPreviewClip={onPreviewClip}
+          onDeleteClip={(clipId) => {
+            // This will be handled by the parent component
+          }}
         />
       </div>
     </div>

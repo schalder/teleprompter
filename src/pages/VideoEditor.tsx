@@ -8,6 +8,8 @@ import { EditorHeader } from '@/components/editor/EditorHeader';
 import { VideoPreview } from '@/components/editor/VideoPreview';
 import { EditorSidebar } from '@/components/editor/EditorSidebar';
 import { TimelineSection } from '@/components/editor/TimelineSection';
+import { VideoSplitControls } from '@/components/editor/VideoSplitControls';
+import { nanoid } from 'nanoid';
 
 const VideoEditor = () => {
   const location = useLocation();
@@ -38,7 +40,7 @@ const VideoEditor = () => {
     const handleLoadedMetadata = () => {
       setDuration(video.duration);
       setClips([{
-        id: '1',
+        id: nanoid(),
         startTime: 0,
         endTime: video.duration
       }]);
@@ -97,24 +99,23 @@ const VideoEditor = () => {
       
       newClips.splice(affectedClipIndex, 1, 
         {
-          id: `${affectedClip.id}-1`,
+          id: nanoid(),
           startTime: affectedClip.startTime,
           endTime: splitTime
         },
         {
-          id: `${affectedClip.id}-2`,
+          id: nanoid(),
           startTime: splitTime,
           endTime: affectedClip.endTime
         }
       );
 
-      toast({
-        title: "Clip split successfully",
-        description: `Split at ${splitTime.toFixed(2)} seconds`,
-      });
-
       return newClips;
     });
+  };
+
+  const handleDeleteClip = (clipId: string) => {
+    setClips(prevClips => prevClips.filter(clip => clip.id !== clipId));
   };
 
   const handleVolumeChange = (value: number[]) => {
@@ -189,8 +190,9 @@ const VideoEditor = () => {
     if (!videoRef.current || !isFinite(startTime)) return;
     
     try {
-      videoRef.current.currentTime = Math.max(0, Math.min(startTime, duration));
-      setCurrentTime(startTime);
+      const validTime = Math.max(0, Math.min(startTime, duration));
+      videoRef.current.currentTime = validTime;
+      setCurrentTime(validTime);
       if (!isPlaying) {
         togglePlayPause();
       }
@@ -240,6 +242,13 @@ const VideoEditor = () => {
                 onToggleLayer={handleToggleLayer}
                 onEffectChange={handleEffectChange}
                 onExport={handleExport}
+              />
+            </div>
+
+            <div className="mt-4">
+              <VideoSplitControls
+                onSplit={handleSplitAtCurrentTime}
+                currentTime={currentTime}
               />
             </div>
           </div>

@@ -2,6 +2,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
+import { AlertCircle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface DeviceSelectorProps {
   label: string;
@@ -29,6 +31,22 @@ const DeviceSelector = ({
       });
     }
   }, [devices, label, toast]);
+
+  // Only show the error alert if there are truly no devices available
+  // and we're specifically looking for audio devices (microphone)
+  if (devices.length === 0 && label.toLowerCase() === "microphone") {
+    return (
+      <div className="space-y-2">
+        <Label className="text-lg font-medium">{label}</Label>
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            No {label.toLowerCase()} detected. Please connect a device and grant permissions.
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-2">

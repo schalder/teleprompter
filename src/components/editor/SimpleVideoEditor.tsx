@@ -7,14 +7,6 @@ import { Button } from '@/components/ui/button';
 import { Download } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
-// Add type declaration for captureStream
-declare global {
-  interface HTMLVideoElement {
-    captureStream(): MediaStream;
-    mozCaptureStream(): MediaStream;
-  }
-}
-
 interface SimpleVideoEditorProps {
   videoUrl: string;
 }
@@ -29,16 +21,26 @@ export const SimpleVideoEditor = ({ videoUrl }: SimpleVideoEditorProps) => {
   const [audioMuted, setAudioMuted] = useState(false);
   const [trimStart, setTrimStart] = useState(0);
   const [trimEnd, setTrimEnd] = useState(0);
-  const [selectionStart, setSelectionStart] = useState<number | undefined>();
-  const [selectionEnd, setSelectionEnd] = useState<number | undefined>();
 
   useEffect(() => {
     if (videoRef.current) {
-      videoRef.current.addEventListener('loadedmetadata', () => {
-        const videoDuration = videoRef.current?.duration || 0;
-        setDuration(videoDuration);
-        setTrimEnd(videoDuration);
-      });
+      const video = videoRef.current;
+      
+      const handleLoadedMetadata = () => {
+        setDuration(video.duration);
+        setTrimEnd(video.duration);
+      };
+
+      video.addEventListener('loadedmetadata', handleLoadedMetadata);
+      
+      // Handle case where metadata is already loaded
+      if (video.readyState >= 2) {
+        handleLoadedMetadata();
+      }
+
+      return () => {
+        video.removeEventListener('loadedmetadata', handleLoadedMetadata);
+      };
     }
   }, []);
 
@@ -55,45 +57,58 @@ export const SimpleVideoEditor = ({ videoUrl }: SimpleVideoEditorProps) => {
 
   const handleSeek = (time: number) => {
     if (videoRef.current && isFinite(time) && time >= 0 && time <= duration) {
-      videoRef.current.currentTime = time;
-      setCurrentTime(time);
+      // Only seek within trim points
+      const seekTime = Math.max(trimStart, Math.min(time, trimEnd));
+      videoRef.current.currentTime = seekTime;
+      setCurrentTime(seekTime);
       if (audioRef.current) {
-        audioRef.current.currentTime = time;
+        audioRef.current.currentTime = seekTime;
       }
     }
   };
 
   const handleTrimStart = () => {
     if (!videoRef.current) return;
-    if (selectionStart !== undefined && selectionEnd !== undefined) {
-      setTrimStart(selectionStart);
-      setTrimEnd(selectionEnd);
-      videoRef.current.currentTime = selectionStart;
-      toast({
-        title: "Selection Trimmed",
-        description: `Removed section from ${selectionStart.toFixed(1)}s to ${selectionEnd.toFixed(1)}s`,
-      });
-    } else {
-      const startTime = videoRef.current.currentTime;
-      setTrimStart(startTime);
-      videoRef.current.currentTime = startTime;
-      toast({
-        title: "Start Trimmed",
-        description: `Removed first ${startTime.toFixed(1)} seconds of video`,
-      });
-    }
-    setSelectionStart(undefined);
-    setSelectionEnd(undefined);
+    const startTime = videoRef.current.currentTime;
+    setTrimStart(startTime);
+    videoRef.current.currentTime = startTime;
+    
+    toast({
+      title: "Start Trimmed",
+      description: `Removed first ${startTime.toFixed(1)} seconds of video`,
+    });
   };
 
   const handleTrimEnd = () => {
     if (!videoRef.current) return;
     const endTime = videoRef.current.currentTime;
     setTrimEnd(endTime);
+    videoRef.current.currentTime = Math.min(currentTime, endTime);
+    
     toast({
       title: "End Trimmed",
       description: `Removed video after ${endTime.toFixed(1)} seconds`,
     });
+  };
+
+  const handleVideoTimeUpdate = () => {
+    if (videoRef.current) {
+      const video = videoRef.current;
+      const currentVideoTime = video.currentTime;
+
+      // Enforce trim points during playback
+      if (currentVideoTime < trimStart) {
+        video.currentTime = trimStart;
+      } else if (currentVideoTime > trimEnd) {
+        video.currentTime = trimStart;
+      } else {
+        setCurrentTime(currentVideoTime);
+      }
+      
+      if (audioRef.current) {
+        audioRef.current.currentTime = video.currentTime;
+      }
+    }
   };
 
   const handleAddAudio = (file: File) => {
@@ -109,33 +124,6 @@ export const SimpleVideoEditor = ({ videoUrl }: SimpleVideoEditorProps) => {
     if (videoRef.current) {
       videoRef.current.style.width = `${dimensions.width}px`;
       videoRef.current.style.height = `${dimensions.height}px`;
-    }
-  };
-
-  const handleVideoTimeUpdate = () => {
-    if (videoRef.current) {
-      const currentVideoTime = videoRef.current.currentTime;
-      setCurrentTime(currentVideoTime);
-
-      if (currentVideoTime >= trimEnd) {
-        videoRef.current.currentTime = trimStart;
-      }
-      
-      if (audioRef.current) {
-        audioRef.current.currentTime = currentVideoTime;
-      }
-    }
-  };
-
-  const handleVideoPlay = () => {
-    if (audioRef.current) {
-      audioRef.current.play();
-    }
-  };
-
-  const handleVideoPause = () => {
-    if (audioRef.current) {
-      audioRef.current.pause();
     }
   };
 
@@ -207,9 +195,6 @@ export const SimpleVideoEditor = ({ videoUrl }: SimpleVideoEditorProps) => {
           src={videoUrl}
           className="max-w-full rounded-lg"
           onTimeUpdate={handleVideoTimeUpdate}
-          onLoadedMetadata={() => setDuration(videoRef.current?.duration || 0)}
-          onPlay={handleVideoPlay}
-          onPause={handleVideoPause}
           controls
         />
         {audioTrack && (
@@ -230,12 +215,6 @@ export const SimpleVideoEditor = ({ videoUrl }: SimpleVideoEditorProps) => {
           currentTime={currentTime}
           duration={duration}
           onSeek={handleSeek}
-          selectionStart={selectionStart}
-          selectionEnd={selectionEnd}
-          onSelectionChange={(start, end) => {
-            setSelectionStart(start);
-            setSelectionEnd(end);
-          }}
         />
 
         <div className="space-y-2">

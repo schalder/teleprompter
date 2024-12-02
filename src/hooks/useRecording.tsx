@@ -15,9 +15,10 @@ export const useRecording = () => {
     try {
       let finalStream: MediaStream;
 
+      // Set exact resolutions based on orientation
       const videoConstraints = {
-        width: { ideal: cameraResolution === "landscape" ? 1920 : 1080 },
-        height: { ideal: cameraResolution === "landscape" ? 1080 : 1920 },
+        width: { exact: cameraResolution === "landscape" ? 1920 : 1080 },
+        height: { exact: cameraResolution === "landscape" ? 1080 : 1920 },
         frameRate: { ideal: 30 }
       };
 
@@ -32,9 +33,19 @@ export const useRecording = () => {
       const existingVideoElement = document.querySelector('video');
       if (recordingType === "camera" && existingVideoElement?.srcObject instanceof MediaStream) {
         console.log('Reusing existing camera stream');
-        finalStream = existingVideoElement.srcObject;
+        // Stop existing stream to ensure new constraints are applied
+        existingVideoElement.srcObject.getTracks().forEach(track => track.stop());
+        
+        // Create new stream with exact resolution constraints
+        finalStream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            ...videoConstraints,
+            facingMode: "user"
+          },
+          audio: audioConstraints
+        });
       } else if (recordingType === "camera") {
-        console.log('Creating new camera stream');
+        console.log('Creating new camera stream with resolution:', videoConstraints);
         finalStream = await navigator.mediaDevices.getUserMedia({
           video: {
             ...videoConstraints,
@@ -43,8 +54,13 @@ export const useRecording = () => {
           audio: audioConstraints
         });
       } else {
+        // For screen recording, maintain aspect ratio but don't force exact resolution
         finalStream = await navigator.mediaDevices.getDisplayMedia({
-          video: videoConstraints,
+          video: {
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+            frameRate: { ideal: 30 }
+          },
           audio: audioConstraints
         });
       }

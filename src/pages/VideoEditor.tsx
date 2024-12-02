@@ -1,16 +1,13 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Slider } from '@/components/ui/slider';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { ArrowLeft } from 'lucide-react';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
-import { ArrowLeft, Play, Pause, RotateCcw, Scissors, Plus } from 'lucide-react';
-
-interface TimelineClip {
-  id: string;
-  startTime: number;
-  endTime: number;
-}
+import { VideoControls } from '@/components/VideoControls';
+import { Timeline } from '@/components/Timeline';
+import { ClipsList } from '@/components/ClipsList';
+import { TimelineClip } from '@/types/editor';
+import { useToast } from '@/components/ui/use-toast';
 
 const VideoEditor = () => {
   const location = useLocation();
@@ -21,6 +18,7 @@ const VideoEditor = () => {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [clips, setClips] = useState<TimelineClip[]>([]);
+  const { toast } = useToast();
 
   useEffect(() => {
     if (!videoUrl) {
@@ -80,7 +78,14 @@ const VideoEditor = () => {
         clip => splitTime > clip.startTime && splitTime < clip.endTime
       );
 
-      if (affectedClipIndex === -1) return prevClips;
+      if (affectedClipIndex === -1) {
+        toast({
+          title: "Cannot split here",
+          description: "Please select a valid position within a clip to split.",
+          variant: "destructive",
+        });
+        return prevClips;
+      }
 
       const affectedClip = prevClips[affectedClipIndex];
       const newClips = [...prevClips];
@@ -98,14 +103,20 @@ const VideoEditor = () => {
         }
       );
 
+      toast({
+        title: "Clip split successfully",
+        description: `Split at ${splitTime.toFixed(2)} seconds`,
+      });
+
       return newClips;
     });
   };
 
   const handleSeek = (value: number[]) => {
-    if (videoRef.current) {
-      videoRef.current.currentTime = value[0];
-      setCurrentTime(value[0]);
+    if (videoRef.current && typeof value[0] === 'number' && isFinite(value[0])) {
+      const newTime = Math.max(0, Math.min(value[0], duration));
+      videoRef.current.currentTime = newTime;
+      setCurrentTime(newTime);
     }
   };
 
@@ -127,7 +138,6 @@ const VideoEditor = () => {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Preview Section */}
               <div className="lg:col-span-2 space-y-4">
                 <div className="relative aspect-video bg-black rounded-lg overflow-hidden">
                   <video
@@ -139,63 +149,24 @@ const VideoEditor = () => {
                   />
                 </div>
                 
-                <div className="flex justify-center gap-4">
-                  <Button onClick={togglePlayPause}>
-                    {isPlaying ? (
-                      <Pause className="w-4 h-4 mr-2" />
-                    ) : (
-                      <Play className="w-4 h-4 mr-2" />
-                    )}
-                    {isPlaying ? 'Pause' : 'Play'}
-                  </Button>
-                  <Button variant="secondary" onClick={handleReset}>
-                    <RotateCcw className="w-4 h-4 mr-2" />
-                    Reset
-                  </Button>
-                  <Button variant="secondary" onClick={handleSplitAtCurrentTime}>
-                    <Scissors className="w-4 h-4 mr-2" />
-                    Split
-                  </Button>
-                </div>
+                <VideoControls
+                  isPlaying={isPlaying}
+                  onPlayPause={togglePlayPause}
+                  onReset={handleReset}
+                  onSplit={handleSplitAtCurrentTime}
+                />
               </div>
 
-              {/* Controls Section */}
               <div className="bg-gray-800 p-4 rounded-lg">
                 <h2 className="text-xl font-semibold mb-4">Editor Controls</h2>
                 <div className="space-y-4">
-                  <div className="p-4 border border-gray-700 rounded-lg">
-                    <h3 className="text-lg font-medium mb-2">Timeline</h3>
-                    <Slider
-                      value={[currentTime]}
-                      min={0}
-                      max={duration}
-                      step={0.1}
-                      onValueChange={handleSeek}
-                      className="mb-4"
-                    />
-                    <div className="text-sm text-gray-400">
-                      {currentTime.toFixed(2)}s / {duration.toFixed(2)}s
-                    </div>
-                  </div>
+                  <Timeline
+                    currentTime={currentTime}
+                    duration={duration}
+                    onSeek={handleSeek}
+                  />
                   
-                  <div className="p-4 border border-gray-700 rounded-lg">
-                    <h3 className="text-lg font-medium mb-2">Clips</h3>
-                    <ScrollArea className="h-[200px]">
-                      {clips.map((clip, index) => (
-                        <div
-                          key={clip.id}
-                          className="p-2 mb-2 bg-gray-700 rounded flex justify-between items-center"
-                        >
-                          <span>
-                            Clip {index + 1}: {clip.startTime.toFixed(2)}s - {clip.endTime.toFixed(2)}s
-                          </span>
-                          <Button variant="ghost" size="sm">
-                            <Plus className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      ))}
-                    </ScrollArea>
-                  </div>
+                  <ClipsList clips={clips} />
                 </div>
               </div>
             </div>

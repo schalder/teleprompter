@@ -5,6 +5,14 @@ import { Button } from '@/components/ui/button';
 import { Download } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
+// Add type declaration for captureStream
+declare global {
+  interface HTMLVideoElement {
+    captureStream(): MediaStream;
+    mozCaptureStream(): MediaStream;
+  }
+}
+
 interface SimpleVideoEditorProps {
   videoUrl: string;
 }
@@ -122,8 +130,14 @@ export const SimpleVideoEditor = ({ videoUrl }: SimpleVideoEditorProps) => {
     });
 
     try {
-      // Create a new MediaRecorder to capture the edited video
-      const stream = videoRef.current.captureStream();
+      // Check for captureStream support
+      const stream = videoRef.current.captureStream?.() || 
+                    videoRef.current.mozCaptureStream?.();
+                    
+      if (!stream) {
+        throw new Error('Video capture not supported in this browser');
+      }
+
       const mediaRecorder = new MediaRecorder(stream, {
         mimeType: 'video/webm;codecs=h264'
       });
@@ -165,7 +179,7 @@ export const SimpleVideoEditor = ({ videoUrl }: SimpleVideoEditorProps) => {
       console.error('Export error:', error);
       toast({
         title: "Export Failed",
-        description: "There was an error exporting your video.",
+        description: error instanceof Error ? error.message : "There was an error exporting your video.",
         variant: "destructive",
       });
     }

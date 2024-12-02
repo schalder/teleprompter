@@ -131,6 +131,7 @@ const Index = () => {
         <FloatingCamera
           videoRef={floatingVideoRef}
           isVisible={isRecording && recordingType === "camera"}
+          cameraResolution={cameraResolution}
         />
       </div>
     </div>

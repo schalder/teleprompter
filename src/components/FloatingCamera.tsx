@@ -3,9 +3,10 @@ import React, { useEffect } from "react";
 interface FloatingCameraProps {
   videoRef: React.RefObject<HTMLVideoElement>;
   isVisible: boolean;
+  cameraResolution: "landscape" | "portrait";
 }
 
-const FloatingCamera = ({ videoRef, isVisible }: FloatingCameraProps) => {
+const FloatingCamera = ({ videoRef, isVisible, cameraResolution }: FloatingCameraProps) => {
   useEffect(() => {
     if (videoRef.current && videoRef.current.srcObject) {
       console.log('Attempting to play floating camera');
@@ -20,8 +21,13 @@ const FloatingCamera = ({ videoRef, isVisible }: FloatingCameraProps) => {
     return null;
   }
 
+  // Adjust dimensions based on resolution
+  const containerClasses = cameraResolution === "portrait"
+    ? "w-[135px] h-[240px]"  // Portrait dimensions (swapped)
+    : "w-[240px] h-[135px]"; // Landscape dimensions (original)
+
   return (
-    <div className="fixed bottom-4 right-4 z-50 w-[240px] h-[135px] bg-gray-900 rounded-lg overflow-hidden shadow-lg">
+    <div className={`fixed bottom-4 right-4 z-50 ${containerClasses} bg-gray-900 rounded-lg overflow-hidden shadow-lg`}>
       <video
         ref={videoRef}
         autoPlay

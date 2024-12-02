@@ -7,6 +7,7 @@ import ResolutionSelector from "./ResolutionSelector";
 import { useToast } from "./ui/use-toast";
 import VideoPreview from "./VideoPreview";
 import RecordingTypeSelector from "./RecordingTypeSelector";
+import { useDevicePermissions } from "@/hooks/useDevicePermissions";
 
 interface RecordingModalProps {
   isOpen: boolean;
@@ -39,9 +40,15 @@ const RecordingModal = ({
   const [audioDevices, setAudioDevices] = useState<MediaDeviceInfo[]>([]);
   const [selectedVideoDevice, setSelectedVideoDevice] = useState<string>("");
   const { toast } = useToast();
+  const { hasPermissions, checkPermissions } = useDevicePermissions();
 
   const updateDevices = async () => {
     try {
+      if (!hasPermissions) {
+        const granted = await checkPermissions();
+        if (!granted) return;
+      }
+
       const devices = await navigator.mediaDevices.enumerateDevices();
       
       const videoInputs = devices.filter(device => device.kind === 'videoinput' && device.deviceId);
@@ -73,30 +80,18 @@ const RecordingModal = ({
 
   useEffect(() => {
     if (isOpen) {
-      // Request initial permissions and enumerate devices
-      navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-        .then(() => updateDevices())
-        .catch((error) => {
-          console.error('Error accessing media:', error);
-          toast({
-            variant: "destructive",
-            title: "Permission Error",
-            description: "Please grant camera and microphone permissions.",
-          });
-        });
-
-      // Listen for device changes
+      updateDevices();
       navigator.mediaDevices.addEventListener('devicechange', updateDevices);
       return () => {
         navigator.mediaDevices.removeEventListener('devicechange', updateDevices);
       };
     }
-  }, [isOpen]);
+  }, [isOpen, hasPermissions]);
 
   // Effect to handle device selection changes
   useEffect(() => {
     const updatePreview = async () => {
-      if (!isPreviewActive || recordingType !== "camera") return;
+      if (!isPreviewActive || recordingType !== "camera" || !hasPermissions) return;
 
       try {
         // Stop existing tracks
@@ -156,7 +151,7 @@ const RecordingModal = ({
     };
 
     updatePreview();
-  }, [selectedVideoDevice, selectedAudioDevice, isPreviewActive, recordingType, cameraResolution]);
+  }, [selectedVideoDevice, selectedAudioDevice, isPreviewActive, recordingType, cameraResolution, hasPermissions]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>

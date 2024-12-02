@@ -17,37 +17,53 @@ export const useRecording = () => {
     try {
       let finalStream: MediaStream;
 
-      const audioConstraints = selectedAudioDeviceId ? {
-        deviceId: { exact: selectedAudioDeviceId },
-        echoCancellation: true,
-        noiseSuppression: true,
-        sampleRate: 48000,
-        channelCount: 2
-      } : true;
+      const audioConstraints: MediaTrackConstraints = selectedAudioDeviceId 
+        ? {
+            deviceId: { exact: selectedAudioDeviceId },
+            echoCancellation: true,
+            noiseSuppression: true,
+            sampleRate: 48000,
+            channelCount: 2
+          } 
+        : true;
 
       console.log('Starting recording with audio device:', selectedAudioDeviceId);
       console.log('Audio constraints:', audioConstraints);
 
       if (recordingType === "camera") {
-        const constraints: MediaStreamConstraints = {
-          video: {
-            width: { exact: cameraResolution === "landscape" ? 1920 : 1080 },
-            height: { exact: cameraResolution === "landscape" ? 1080 : 1920 },
-            frameRate: { ideal: 30 },
-            facingMode: "user"
-          },
-          audio: audioConstraints
+        const videoConstraints: MediaTrackConstraints = {
+          width: { exact: cameraResolution === "landscape" ? 1920 : 1080 },
+          height: { exact: cameraResolution === "landscape" ? 1080 : 1920 },
+          frameRate: { ideal: 30 },
+          facingMode: "user"
         };
 
-        finalStream = await navigator.mediaDevices.getUserMedia(constraints);
+        console.log('Video constraints:', videoConstraints);
 
-        // Verify the selected audio device
+        finalStream = await navigator.mediaDevices.getUserMedia({
+          video: videoConstraints,
+          audio: audioConstraints
+        });
+
+        // Verify the selected devices
+        const videoTrack = finalStream.getVideoTracks()[0];
         const audioTrack = finalStream.getAudioTracks()[0];
+        
+        if (videoTrack) {
+          const settings = videoTrack.getSettings();
+          console.log('Recording video track settings:', settings);
+        }
+        
         if (audioTrack) {
           const settings = audioTrack.getSettings();
           console.log('Recording audio track settings:', settings);
-          if (settings.deviceId !== selectedAudioDeviceId) {
+          if (selectedAudioDeviceId && settings.deviceId !== selectedAudioDeviceId) {
             console.warn('Warning: Active recording audio device differs from selected device');
+            toast({
+              title: "Audio Device Warning",
+              description: "Could not use the selected microphone. Using default device instead.",
+              variant: "destructive",
+            });
           }
         }
       } else {

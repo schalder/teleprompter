@@ -186,12 +186,21 @@ const VideoEditor = () => {
   };
 
   const handlePreviewClip = (startTime: number) => {
-    if (videoRef.current) {
-      videoRef.current.currentTime = startTime;
+    if (!videoRef.current || !isFinite(startTime)) return;
+    
+    try {
+      videoRef.current.currentTime = Math.max(0, Math.min(startTime, duration));
       setCurrentTime(startTime);
       if (!isPlaying) {
         togglePlayPause();
       }
+    } catch (error) {
+      console.error('Error setting video time:', error);
+      toast({
+        title: "Error",
+        description: "Failed to preview clip at the specified time.",
+        variant: "destructive",
+      });
     }
   };
 

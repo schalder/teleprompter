@@ -1,11 +1,13 @@
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Camera, Monitor } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState, useEffect } from "react";
+import DeviceSelector from "./DeviceSelector";
+import ResolutionSelector from "./ResolutionSelector";
+import { useToast } from "./ui/use-toast";
 
 interface RecordingModalProps {
   isOpen: boolean;
@@ -34,32 +36,58 @@ const RecordingModal = ({
   const [audioDevices, setAudioDevices] = useState<MediaDeviceInfo[]>([]);
   const [selectedVideoDevice, setSelectedVideoDevice] = useState<string>("");
   const [selectedAudioDevice, setSelectedAudioDevice] = useState<string>("");
+  const { toast } = useToast();
+
+  const updateDevices = async () => {
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      
+      const videoInputs = devices.filter(device => device.kind === 'videoinput');
+      const audioInputs = devices.filter(device => device.kind === 'audioinput');
+      
+      setVideoDevices(videoInputs);
+      setAudioDevices(audioInputs);
+      
+      // Only set default devices if none are selected
+      if (!selectedVideoDevice && videoInputs.length > 0) {
+        setSelectedVideoDevice(videoInputs[0].deviceId);
+      }
+      if (!selectedAudioDevice && audioInputs.length > 0) {
+        setSelectedAudioDevice(audioInputs[0].deviceId);
+      }
+    } catch (error) {
+      console.error('Error accessing media devices:', error);
+      toast({
+        variant: "destructive",
+        title: "Device Error",
+        description: "Failed to access media devices. Please check permissions.",
+      });
+    }
+  };
 
   useEffect(() => {
-    const getDevices = async () => {
-      try {
-        await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-        const devices = await navigator.mediaDevices.enumerateDevices();
-        
-        const videoInputs = devices.filter(device => device.kind === 'videoinput');
-        const audioInputs = devices.filter(device => device.kind === 'audioinput');
-        
-        setVideoDevices(videoInputs);
-        setAudioDevices(audioInputs);
-        
-        if (videoInputs.length > 0) setSelectedVideoDevice(videoInputs[0].deviceId);
-        if (audioInputs.length > 0) setSelectedAudioDevice(audioInputs[0].deviceId);
-      } catch (error) {
-        console.error('Error accessing media devices:', error);
-      }
-    };
-
     if (isOpen) {
-      getDevices();
+      // Request initial permissions and enumerate devices
+      navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+        .then(() => updateDevices())
+        .catch((error) => {
+          console.error('Error accessing media:', error);
+          toast({
+            variant: "destructive",
+            title: "Permission Error",
+            description: "Please grant camera and microphone permissions.",
+          });
+        });
+
+      // Listen for device changes
+      navigator.mediaDevices.addEventListener('devicechange', updateDevices);
+      return () => {
+        navigator.mediaDevices.removeEventListener('devicechange', updateDevices);
+      };
     }
   }, [isOpen]);
 
-  // New effect to handle device selection changes
+  // Effect to handle device selection changes
   useEffect(() => {
     const updatePreview = async () => {
       if (!isPreviewActive || recordingType !== "camera") return;
@@ -72,25 +100,30 @@ const RecordingModal = ({
 
         // Get new stream with selected devices
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: {
+          video: selectedVideoDevice ? {
             deviceId: selectedVideoDevice,
             width: { ideal: cameraResolution === "landscape" ? 1920 : 1080 },
             height: { ideal: cameraResolution === "landscape" ? 1080 : 1920 },
             frameRate: { ideal: 30 },
-          },
-          audio: {
+          } : true,
+          audio: selectedAudioDevice ? {
             deviceId: selectedAudioDevice,
             echoCancellation: true,
             noiseSuppression: true,
             sampleRate: 48000,
-          }
+          } : true,
         });
 
         if (previewVideoRef.current) {
           previewVideoRef.current.srcObject = stream;
         }
       } catch (error) {
-        console.error('Error updating preview with selected devices:', error);
+        console.error('Error updating preview:', error);
+        toast({
+          variant: "destructive",
+          title: "Preview Error",
+          description: "Failed to update preview with selected devices.",
+        });
       }
     };
 
@@ -100,13 +133,12 @@ const RecordingModal = ({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[425px] bg-gray-900 text-white flex flex-col h-[90vh]">
+        <DialogTitle className="text-2xl font-bold text-center">Start Recording</DialogTitle>
+        
         <div className="flex-1 overflow-hidden">
           <ScrollArea className="h-full">
             <div className="space-y-6 p-6">
-              <div className="text-center">
-                <h2 className="text-2xl font-bold">Start Recording</h2>
-                <p className="text-gray-400">Choose what you want to record</p>
-              </div>
+              <p className="text-gray-400 text-center">Choose what you want to record</p>
 
               <RadioGroup
                 value={recordingType}
@@ -138,57 +170,26 @@ const RecordingModal = ({
 
               {recordingType === "camera" && (
                 <>
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label className="text-lg font-medium">Select Camera</Label>
-                      <Select value={selectedVideoDevice} onValueChange={setSelectedVideoDevice}>
-                        <SelectTrigger className="w-full bg-gray-800 border-gray-700 text-white">
-                          <SelectValue placeholder="Select a camera" className="text-gray-300" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-gray-800 border-gray-700">
-                          {videoDevices.map((device) => (
-                            <SelectItem key={device.deviceId} value={device.deviceId} className="text-white hover:bg-gray-700">
-                              {device.label || `Camera ${videoDevices.indexOf(device) + 1}`}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
+                  <DeviceSelector
+                    label="Camera"
+                    devices={videoDevices}
+                    selectedDevice={selectedVideoDevice}
+                    onDeviceChange={setSelectedVideoDevice}
+                    placeholder="Select a camera"
+                  />
 
-                    <div className="space-y-2">
-                      <Label className="text-lg font-medium">Select Microphone</Label>
-                      <Select value={selectedAudioDevice} onValueChange={setSelectedAudioDevice}>
-                        <SelectTrigger className="w-full bg-gray-800 border-gray-700 text-white">
-                          <SelectValue placeholder="Select a microphone" className="text-gray-300" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-gray-800 border-gray-700">
-                          {audioDevices.map((device) => (
-                            <SelectItem key={device.deviceId} value={device.deviceId} className="text-white hover:bg-gray-700">
-                              {device.label || `Microphone ${audioDevices.indexOf(device) + 1}`}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
+                  <DeviceSelector
+                    label="Microphone"
+                    devices={audioDevices}
+                    selectedDevice={selectedAudioDevice}
+                    onDeviceChange={setSelectedAudioDevice}
+                    placeholder="Select a microphone"
+                  />
 
-                  <div className="space-y-2">
-                    <Label className="text-lg font-medium">Camera Resolution</Label>
-                    <RadioGroup
-                      value={cameraResolution}
-                      onValueChange={(value: "landscape" | "portrait") => setCameraResolution(value)}
-                      className="grid grid-cols-1 gap-4"
-                    >
-                    <div className="flex items-center space-x-4 p-4 rounded-lg border border-gray-700 hover:bg-gray-800 cursor-pointer">
-                      <RadioGroupItem value="landscape" id="landscape" className="border-white text-white" />
-                      <Label htmlFor="landscape" className="cursor-pointer">1920x1080 (Landscape)</Label>
-                    </div>
-                    <div className="flex items-center space-x-4 p-4 rounded-lg border border-gray-700 hover:bg-gray-800 cursor-pointer">
-                      <RadioGroupItem value="portrait" id="portrait" className="border-white text-white" />
-                      <Label htmlFor="portrait" className="cursor-pointer">1080x1920 (Portrait)</Label>
-                    </div>
-                    </RadioGroup>
-                  </div>
+                  <ResolutionSelector
+                    cameraResolution={cameraResolution}
+                    setCameraResolution={setCameraResolution}
+                  />
                 </>
               )}
 

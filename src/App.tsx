@@ -8,25 +8,23 @@ import Index from "./pages/Index";
 import Preview from "./pages/Preview";
 import VideoEditor from "./pages/VideoEditor";
 
-const App = () => {
+const App: React.FC = () => {
   const [queryClient] = useState(() => new QueryClient());
 
   return (
-    <React.StrictMode>
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/preview" element={<Preview />} />
-              <Route path="/editor" element={<VideoEditor />} />
-            </Routes>
-          </BrowserRouter>
-        </TooltipProvider>
-      </QueryClientProvider>
-    </React.StrictMode>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/preview" element={<Preview />} />
+            <Route path="/editor" element={<VideoEditor />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
   );
 };
 

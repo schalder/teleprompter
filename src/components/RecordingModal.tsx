@@ -39,7 +39,6 @@ const RecordingModal = ({
   const [videoDevices, setVideoDevices] = useState<MediaDeviceInfo[]>([]);
   const [audioDevices, setAudioDevices] = useState<MediaDeviceInfo[]>([]);
   const [selectedVideoDevice, setSelectedVideoDevice] = useState<string>("");
-  const [selectedAudioDevice, setSelectedAudioDevice] = useState<string>("");
   const { toast } = useToast();
 
   const updateDevices = async () => {

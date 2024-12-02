@@ -19,6 +19,8 @@ interface RecordingModalProps {
   isPreviewActive: boolean;
   cameraResolution: "landscape" | "portrait";
   setCameraResolution: (resolution: "landscape" | "portrait") => void;
+  selectedAudioDevice: string;
+  setSelectedAudioDevice: (deviceId: string) => void;
 }
 
 const RecordingModal = ({
@@ -31,6 +33,8 @@ const RecordingModal = ({
   isPreviewActive,
   cameraResolution,
   setCameraResolution,
+  selectedAudioDevice,
+  setSelectedAudioDevice,
 }: RecordingModalProps) => {
   const [videoDevices, setVideoDevices] = useState<MediaDeviceInfo[]>([]);
   const [audioDevices, setAudioDevices] = useState<MediaDeviceInfo[]>([]);

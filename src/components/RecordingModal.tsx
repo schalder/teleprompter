@@ -59,6 +59,44 @@ const RecordingModal = ({
     }
   }, [isOpen]);
 
+  // New effect to handle device selection changes
+  useEffect(() => {
+    const updatePreview = async () => {
+      if (!isPreviewActive || recordingType !== "camera") return;
+
+      try {
+        // Stop existing tracks
+        if (previewVideoRef.current?.srcObject instanceof MediaStream) {
+          previewVideoRef.current.srcObject.getTracks().forEach(track => track.stop());
+        }
+
+        // Get new stream with selected devices
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            deviceId: selectedVideoDevice,
+            width: { ideal: cameraResolution === "landscape" ? 1920 : 1080 },
+            height: { ideal: cameraResolution === "landscape" ? 1080 : 1920 },
+            frameRate: { ideal: 30 },
+          },
+          audio: {
+            deviceId: selectedAudioDevice,
+            echoCancellation: true,
+            noiseSuppression: true,
+            sampleRate: 48000,
+          }
+        });
+
+        if (previewVideoRef.current) {
+          previewVideoRef.current.srcObject = stream;
+        }
+      } catch (error) {
+        console.error('Error updating preview with selected devices:', error);
+      }
+    };
+
+    updatePreview();
+  }, [selectedVideoDevice, selectedAudioDevice, isPreviewActive, recordingType, cameraResolution]);
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[425px] bg-gray-900 text-white flex flex-col h-[90vh]">

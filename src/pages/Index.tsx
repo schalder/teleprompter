@@ -1,11 +1,10 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import TeleprompterControls from "@/components/TeleprompterControls";
 import RecordingModal from "@/components/RecordingModal";
 import TeleprompterPreview from "@/components/TeleprompterPreview";
 import RecordingControls from "@/components/RecordingControls";
-import FloatingCamera from "@/components/FloatingCamera";
 import { useMediaStream } from "@/hooks/useMediaStream";
 import { useRecording } from "@/hooks/useRecording";
 
@@ -18,7 +17,6 @@ const Index = () => {
   const [recordingType, setRecordingType] = useState<"camera" | "screen">("camera");
   const [cameraResolution, setCameraResolution] = useState<"landscape" | "portrait">("landscape");
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const floatingVideoRef = useRef<HTMLVideoElement>(null);
 
   const { 
     previewStream, 
@@ -38,14 +36,6 @@ const Index = () => {
       startPreview(recordingType, cameraResolution);
     }
   }, [recordingType, isModalOpen, cameraResolution]);
-
-  // Effect to handle floating camera stream
-  useEffect(() => {
-    if (isRecording && recordingType === "camera" && floatingVideoRef.current && previewStream) {
-      floatingVideoRef.current.srcObject = previewStream;
-      console.log('Setting floating camera stream:', previewStream.id);
-    }
-  }, [isRecording, recordingType, previewStream]);
 
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -126,12 +116,6 @@ const Index = () => {
           isPreviewActive={!!previewStream}
           cameraResolution={cameraResolution}
           setCameraResolution={setCameraResolution}
-        />
-
-        <FloatingCamera
-          videoRef={floatingVideoRef}
-          isVisible={isRecording && recordingType === "camera"}
-          cameraResolution={cameraResolution}
         />
       </div>
     </div>

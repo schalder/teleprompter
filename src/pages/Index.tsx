@@ -48,6 +48,7 @@ const Index = () => {
 
   const handleStartRecording = async () => {
     scrollToTop();
+    // Pass the existing screen capture stream if available
     const success = await startRecording(
       recordingType, 
       cameraResolution,

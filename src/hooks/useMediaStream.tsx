@@ -25,6 +25,7 @@ export const useMediaStream = () => {
     selectedAudioDeviceId?: string
   ) => {
     try {
+      // Stop any existing streams
       if (previewStream) {
         previewStream.getTracks().forEach((track) => {
           track.stop();
@@ -55,14 +56,14 @@ export const useMediaStream = () => {
       }
 
       if (stream) {
-        // Ensure audio tracks are properly handled
-        stream.getAudioTracks().forEach(track => {
-          track.enabled = false; // Disable audio tracks
-        });
+        // Create a new stream with only video tracks for preview
+        const videoOnlyStream = new MediaStream(
+          stream.getVideoTracks()
+        );
         
-        setPreviewStream(stream);
+        setPreviewStream(stream); // Keep original stream for recording
         if (previewVideoRef.current) {
-          previewVideoRef.current.srcObject = stream;
+          previewVideoRef.current.srcObject = videoOnlyStream; // Use video-only stream for preview
           previewVideoRef.current.muted = true;
           await previewVideoRef.current.play();
           console.log('Preview started successfully');

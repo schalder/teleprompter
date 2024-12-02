@@ -19,20 +19,27 @@ export const useStreamSetup = () => {
         frameRate: { ideal: 30 },
         facingMode: "user",
       },
-      audio: {
-        deviceId: selectedAudioDeviceId ? { exact: selectedAudioDeviceId } : undefined,
+      audio: selectedAudioDeviceId ? {
+        deviceId: { exact: selectedAudioDeviceId },
         echoCancellation: true,
         noiseSuppression: true,
         sampleRate: 48000,
-      },
+        autoGainControl: false,
+      } : false
     };
 
     console.log('Requesting media with constraints:', constraints);
     const stream = await navigator.mediaDevices.getUserMedia(constraints);
     
-    // Ensure audio tracks are disabled immediately
+    // Configure audio tracks for recording only
     stream.getAudioTracks().forEach(track => {
-      track.enabled = false;
+      track.enabled = true; // Enable for recording
+      console.log('Audio track configured:', {
+        id: track.id,
+        enabled: track.enabled,
+        muted: track.muted,
+        readyState: track.readyState
+      });
     });
     
     console.log('Stream obtained successfully');

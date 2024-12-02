@@ -1,5 +1,6 @@
 export interface TimelineClip {
   id: string;
+  name?: string;  // Make name optional
   startTime: number;
   endTime: number;
 }

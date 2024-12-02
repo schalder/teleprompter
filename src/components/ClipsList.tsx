@@ -46,7 +46,7 @@ export const ClipsList = ({
             onDragEnd={handleDragEnd}
             className="p-2 bg-gray-700 rounded flex justify-between items-center mb-2"
           >
-            <span>{clip.name}</span>
+            <span>{clip.name || `Clip ${index + 1}`}</span>
             <div className="flex space-x-2">
               <button onClick={() => onPreviewClip(clip.startTime)}>Preview</button>
               <button onClick={() => onDeleteClip(clip.id)}>Delete</button>

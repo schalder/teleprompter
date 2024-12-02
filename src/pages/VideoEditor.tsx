@@ -1,6 +1,5 @@
 import React, { useRef, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 import { KeyboardShortcuts } from '@/components/KeyboardShortcuts';
 import { useToast } from '@/hooks/use-toast';
 import { EditorHeader } from '@/components/editor/EditorHeader';
@@ -202,40 +201,36 @@ const VideoEditor = () => {
         onRedo={() => {}}
       />
       
-      <ResizablePanelGroup direction="vertical" className="min-h-screen">
-        <ResizablePanel defaultSize={60}>
-          <div className="p-4">
-            <EditorHeader />
+      <div className="p-4">
+        <EditorHeader />
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <VideoPreview
-                videoRef={videoRef}
-                videoUrl={videoUrl}
-                isPlaying={isPlaying}
-                currentTime={currentTime}
-                volume={volume}
-                isMuted={isMuted}
-                onPlayPause={togglePlayPause}
-                onReset={handleReset}
-                onSplit={handleSplitAtCurrentTime}
-                onTimeUpdate={handleTimeUpdate}
-                onEnded={() => setIsPlaying(false)}
-                onVolumeChange={handleVolumeChangeArray}
-                onMuteToggle={() => setIsMuted(!isMuted)}
-              />
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          {/* Video Preview and Timeline Section - Takes up 3 columns */}
+          <div className="lg:col-span-3 space-y-6">
+            <VideoPreview
+              videoRef={videoRef}
+              videoUrl={videoUrl}
+              isPlaying={isPlaying}
+              currentTime={currentTime}
+              volume={volume}
+              isMuted={isMuted}
+              onPlayPause={togglePlayPause}
+              onReset={handleReset}
+              onSplit={handleSplitAtCurrentTime}
+              onTimeUpdate={handleTimeUpdate}
+              onEnded={() => setIsPlaying(false)}
+              onVolumeChange={handleVolumeChangeArray}
+              onMuteToggle={() => setIsMuted(!isMuted)}
+            />
 
-              <EditorSidebar
-                layers={layers}
-                onToggleLayer={handleToggleLayer}
-                onEffectChange={handleEffectChange}
-                onExport={handleExport}
-                onAddLayer={handleAddLayer}
-                onVolumeChange={handleVolumeChange}
-                onMuteToggle={handleMuteToggle}
-                onCropChange={handleCropChange}
-                onResizeChange={handleResizeChange}
-              />
-            </div>
+            <TimelineSection
+              currentTime={currentTime}
+              duration={duration}
+              clips={layers.find(l => l.type === 'video')?.clips || []}
+              onSeek={value => handlePreviewClip(value[0])}
+              onReorder={handleClipReorder}
+              onPreviewClip={handlePreviewClip}
+            />
 
             <div className="mt-4">
               <VideoSplitControls
@@ -244,21 +239,23 @@ const VideoEditor = () => {
               />
             </div>
           </div>
-        </ResizablePanel>
 
-        <ResizableHandle />
-
-        <ResizablePanel defaultSize={40}>
-          <TimelineSection
-            currentTime={currentTime}
-            duration={duration}
-            clips={layers.find(l => l.type === 'video')?.clips || []}
-            onSeek={value => handlePreviewClip(value[0])}
-            onReorder={handleClipReorder}
-            onPreviewClip={handlePreviewClip}
-          />
-        </ResizablePanel>
-      </ResizablePanelGroup>
+          {/* Sidebar - Takes up 1 column */}
+          <div className="lg:col-span-1">
+            <EditorSidebar
+              layers={layers}
+              onToggleLayer={handleToggleLayer}
+              onEffectChange={handleEffectChange}
+              onExport={handleExport}
+              onAddLayer={handleAddLayer}
+              onVolumeChange={handleVolumeChange}
+              onMuteToggle={handleMuteToggle}
+              onCropChange={handleCropChange}
+              onResizeChange={handleResizeChange}
+            />
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

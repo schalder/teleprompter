@@ -11,7 +11,8 @@ export const useRecording = () => {
   const startRecording = async (
     recordingType: "camera" | "screen",
     cameraResolution: "landscape" | "portrait",
-    existingStream?: MediaStream | null
+    existingStream?: MediaStream | null,
+    selectedAudioDeviceId?: string
   ) => {
     try {
       let finalStream: MediaStream;
@@ -24,11 +25,14 @@ export const useRecording = () => {
       };
 
       const audioConstraints = {
+        deviceId: selectedAudioDeviceId ? { exact: selectedAudioDeviceId } : undefined,
         echoCancellation: true,
         noiseSuppression: true,
         sampleRate: 48000,
         channelCount: 2
       };
+
+      console.log('Starting recording with audio device:', selectedAudioDeviceId);
 
       // Clean up any existing streams
       const existingVideoElement = document.querySelector('video');
@@ -41,7 +45,7 @@ export const useRecording = () => {
       }
 
       if (recordingType === "camera") {
-        console.log('Creating new camera stream with resolution:', videoConstraints);
+        console.log('Creating new camera stream with audio constraints:', audioConstraints);
         finalStream = await navigator.mediaDevices.getUserMedia({
           video: {
             ...videoConstraints,
@@ -49,6 +53,16 @@ export const useRecording = () => {
           },
           audio: audioConstraints
         });
+
+        // Verify the selected audio device
+        const audioTrack = finalStream.getAudioTracks()[0];
+        if (audioTrack) {
+          const settings = audioTrack.getSettings();
+          console.log('Active audio track settings:', settings);
+          if (settings.deviceId !== selectedAudioDeviceId) {
+            console.warn('Warning: Active audio device differs from selected device');
+          }
+        }
       } else {
         finalStream = await navigator.mediaDevices.getDisplayMedia({
           video: {
@@ -69,6 +83,9 @@ export const useRecording = () => {
         console.log('Video track state:', videoTrack.readyState);
         console.log('Audio track state:', audioTrack?.readyState);
         console.log('Video track settings:', videoTrack.getSettings());
+        if (audioTrack) {
+          console.log('Audio track settings:', audioTrack.getSettings());
+        }
 
         // Function to check if stream is fully ready
         const isStreamReady = () => {
@@ -84,7 +101,7 @@ export const useRecording = () => {
 
         // Initial check
         if (isStreamReady()) {
-          console.log('Stream is ready immediately with settings:', videoTrack.getSettings());
+          console.log('Stream is ready immediately');
           resolve(true);
           return;
         }
@@ -145,8 +162,14 @@ export const useRecording = () => {
 
       // Final verification
       const videoTrack = finalStream.getVideoTracks()[0];
+      const audioTrack = finalStream.getAudioTracks()[0];
+      
       if (!finalStream.active || !videoTrack || videoTrack.readyState !== 'live') {
         throw new Error('Stream failed final validation check');
+      }
+
+      if (audioTrack) {
+        console.log('Final audio track settings:', audioTrack.getSettings());
       }
 
       console.log('Stream passed all validation checks');

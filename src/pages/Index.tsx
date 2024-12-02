@@ -31,6 +31,8 @@ const Index = () => {
     stopRecording 
   } = useRecording();
 
+  const [selectedAudioDevice, setSelectedAudioDevice] = useState<string>("");
+
   useEffect(() => {
     if (isModalOpen) {
       startPreview(recordingType, cameraResolution);
@@ -48,11 +50,12 @@ const Index = () => {
 
   const handleStartRecording = async () => {
     scrollToTop();
-    // Pass the existing screen capture stream if available
+    // Pass the existing screen capture stream if available and the selected audio device
     const success = await startRecording(
       recordingType, 
       cameraResolution,
-      recordingType === "screen" ? screenCaptureStream : null
+      recordingType === "screen" ? screenCaptureStream : null,
+      selectedAudioDevice // Add this parameter
     );
     if (success) {
       setIsRecording(true);
@@ -117,6 +120,8 @@ const Index = () => {
           isPreviewActive={!!previewStream}
           cameraResolution={cameraResolution}
           setCameraResolution={setCameraResolution}
+          selectedAudioDevice={selectedAudioDevice} // Add this prop
+          setSelectedAudioDevice={setSelectedAudioDevice} // Add this prop
         />
       </div>
     </div>

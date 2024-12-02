@@ -131,6 +131,13 @@ const RecordingModal = ({
         if (previewVideoRef.current) {
           previewVideoRef.current.srcObject = stream;
           console.log('Preview updated with new devices');
+          
+          // Verify audio device
+          const audioTrack = stream.getAudioTracks()[0];
+          if (audioTrack) {
+            const settings = audioTrack.getSettings();
+            console.log('Preview audio track settings:', settings);
+          }
         }
       } catch (error) {
         console.error('Error updating preview:', error);

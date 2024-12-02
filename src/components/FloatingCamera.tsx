@@ -8,12 +8,19 @@ interface FloatingCameraProps {
 
 const FloatingCamera = ({ videoRef, isVisible, cameraResolution }: FloatingCameraProps) => {
   useEffect(() => {
-    if (videoRef.current && videoRef.current.srcObject) {
-      console.log('Attempting to play floating camera');
-      videoRef.current.play().catch(error => {
-        console.error('Error playing floating camera:', error);
-      });
-    }
+    const playVideo = async () => {
+      if (videoRef.current && videoRef.current.srcObject) {
+        console.log('Attempting to play floating camera');
+        try {
+          await videoRef.current.play();
+          console.log('Floating camera playing successfully');
+        } catch (error) {
+          console.error('Error playing floating camera:', error);
+        }
+      }
+    };
+
+    playVideo();
   }, [videoRef.current?.srcObject]);
 
   if (!isVisible) {
@@ -23,19 +30,20 @@ const FloatingCamera = ({ videoRef, isVisible, cameraResolution }: FloatingCamer
 
   // Adjust dimensions based on resolution
   const containerClasses = cameraResolution === "portrait"
-    ? "w-[135px] h-[240px]"  // Portrait dimensions (swapped)
-    : "w-[240px] h-[135px]"; // Landscape dimensions (original)
+    ? "w-[135px] h-[240px]"  // Portrait dimensions (9:16 ratio)
+    : "w-[240px] h-[135px]"; // Landscape dimensions (16:9 ratio)
 
-  const videoClasses = cameraResolution === "portrait"
-    ? "w-full h-full object-cover [transform:scaleX(-1)]"
-    : "w-full h-full object-cover [transform:scaleX(-1)]";
+  // Keep video element styles consistent to maintain aspect ratio
+  const videoClasses = "w-full h-full object-cover [transform:scaleX(-1)]";
 
   console.log('Floating camera rendering with resolution:', cameraResolution);
   console.log('Container classes:', containerClasses);
-  console.log('Video element classes:', videoClasses);
+  console.log('Stream object:', videoRef.current?.srcObject ? 'Present' : 'Missing');
 
   return (
-    <div className={`fixed bottom-4 right-4 z-50 ${containerClasses} bg-gray-900 rounded-lg overflow-hidden shadow-lg`}>
+    <div 
+      className={`fixed bottom-4 right-4 z-50 ${containerClasses} bg-gray-900 rounded-lg overflow-hidden shadow-lg border border-gray-700`}
+    >
       <video
         ref={videoRef}
         autoPlay

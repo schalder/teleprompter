@@ -30,13 +30,14 @@ const FloatingCamera = ({ videoRef, isVisible, cameraResolution }: FloatingCamer
         if (!hasAttemptedPlay.current) {
           hasAttemptedPlay.current = true;
           
-          // Ensure video is muted in multiple ways
+          // Ensure video is completely muted
           videoRef.current.muted = true;
           videoRef.current.volume = 0;
           
-          // Mute all audio tracks in the stream
+          // Disable all audio tracks in the stream
           stream.getAudioTracks().forEach(track => {
             track.enabled = false;
+            track.stop(); // Stop the audio tracks completely
           });
           
           // Wait for metadata to load first
@@ -62,7 +63,8 @@ const FloatingCamera = ({ videoRef, isVisible, cameraResolution }: FloatingCamer
             volume: videoRef.current.volume,
             audioTracks: stream.getAudioTracks().map(track => ({
               enabled: track.enabled,
-              muted: track.muted
+              muted: track.muted,
+              readyState: track.readyState
             }))
           });
         }
@@ -82,6 +84,13 @@ const FloatingCamera = ({ videoRef, isVisible, cameraResolution }: FloatingCamer
 
     return () => {
       if (videoRef.current) {
+        const stream = videoRef.current.srcObject as MediaStream;
+        if (stream) {
+          stream.getAudioTracks().forEach(track => {
+            track.enabled = false;
+            track.stop();
+          });
+        }
         videoRef.current.pause();
       }
       hasAttemptedPlay.current = false;

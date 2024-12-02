@@ -30,8 +30,14 @@ const FloatingCamera = ({ videoRef, isVisible, cameraResolution }: FloatingCamer
         if (!hasAttemptedPlay.current) {
           hasAttemptedPlay.current = true;
           
-          // Ensure video is muted
+          // Ensure video is muted in multiple ways
           videoRef.current.muted = true;
+          videoRef.current.volume = 0;
+          
+          // Mute all audio tracks in the stream
+          stream.getAudioTracks().forEach(track => {
+            track.enabled = false;
+          });
           
           // Wait for metadata to load first
           if (videoRef.current.readyState === 0) {
@@ -52,7 +58,12 @@ const FloatingCamera = ({ videoRef, isVisible, cameraResolution }: FloatingCamer
             readyState: videoRef.current.readyState,
             videoWidth: videoRef.current.videoWidth,
             videoHeight: videoRef.current.videoHeight,
-            muted: videoRef.current.muted
+            muted: videoRef.current.muted,
+            volume: videoRef.current.volume,
+            audioTracks: stream.getAudioTracks().map(track => ({
+              enabled: track.enabled,
+              muted: track.muted
+            }))
           });
         }
       } catch (error) {
@@ -90,7 +101,8 @@ const FloatingCamera = ({ videoRef, isVisible, cameraResolution }: FloatingCamer
           ref={videoRef}
           autoPlay
           playsInline
-          muted
+          muted={true}
+          defaultMuted={true}
           className="absolute inset-0 w-full h-full object-cover [transform:scaleX(-1)]"
         />
         <div 

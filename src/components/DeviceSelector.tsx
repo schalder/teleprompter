@@ -19,7 +19,10 @@ const DeviceSelector = ({
   return (
     <div className="space-y-2">
       <Label className="text-lg font-medium">{label}</Label>
-      <Select value={selectedDevice} onValueChange={onDeviceChange}>
+      <Select 
+        value={selectedDevice || devices[0]?.deviceId} 
+        onValueChange={onDeviceChange}
+      >
         <SelectTrigger className="w-full bg-gray-800 border-gray-700 text-white">
           <SelectValue placeholder={placeholder} className="text-gray-300" />
         </SelectTrigger>

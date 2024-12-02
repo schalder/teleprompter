@@ -14,7 +14,7 @@ const App: React.FC = () => {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <Toaster />
-        <Sonner />
+        <Sonner position="bottom-center" className="toaster-mobile fixed !bottom-4 !top-auto" />
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Index />} />

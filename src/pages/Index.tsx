@@ -1,11 +1,10 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import TeleprompterControls from "@/components/TeleprompterControls";
 import RecordingModal from "@/components/RecordingModal";
 import TeleprompterPreview from "@/components/TeleprompterPreview";
 import RecordingControls from "@/components/RecordingControls";
-import FloatingCamera from "@/components/FloatingCamera";
 import { useMediaStream } from "@/hooks/useMediaStream";
 import { useRecording } from "@/hooks/useRecording";
 
@@ -18,7 +17,6 @@ const Index = () => {
   const [recordingType, setRecordingType] = useState<"camera" | "screen">("camera");
   const [cameraResolution, setCameraResolution] = useState<"landscape" | "portrait">("landscape");
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const floatingVideoRef = useRef<HTMLVideoElement>(null);
 
   const { 
     previewStream, 
@@ -33,19 +31,13 @@ const Index = () => {
     stopRecording 
   } = useRecording();
 
+  const [selectedAudioDevice, setSelectedAudioDevice] = useState<string>("");
+
   useEffect(() => {
     if (isModalOpen) {
       startPreview(recordingType, cameraResolution);
     }
   }, [recordingType, isModalOpen, cameraResolution]);
-
-  // Effect to handle floating camera stream
-  useEffect(() => {
-    if (isRecording && recordingType === "camera" && floatingVideoRef.current && previewStream) {
-      floatingVideoRef.current.srcObject = previewStream;
-      console.log('Setting floating camera stream:', previewStream.id);
-    }
-  }, [isRecording, recordingType, previewStream]);
 
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -61,7 +53,8 @@ const Index = () => {
     const success = await startRecording(
       recordingType, 
       cameraResolution,
-      recordingType === "screen" ? screenCaptureStream : null
+      recordingType === "screen" ? screenCaptureStream : null,
+      selectedAudioDevice 
     );
     if (success) {
       setIsRecording(true);
@@ -78,7 +71,7 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-gray-900 text-white p-4 sm:p-6">
       <div className="max-w-4xl mx-auto space-y-6">
-        <h1 className="text-2xl sm:text-3xl font-bold text-center mb-6">Teleprompter For Digital Creators</h1>
+        <h1 className="text-xl sm:text-3xl font-bold text-center mb-6">Teleprompter For Digital Creators</h1>
         
         <div className="relative w-full overflow-hidden rounded-lg bg-gray-800">
           <TeleprompterPreview
@@ -126,12 +119,8 @@ const Index = () => {
           isPreviewActive={!!previewStream}
           cameraResolution={cameraResolution}
           setCameraResolution={setCameraResolution}
-        />
-
-        <FloatingCamera
-          videoRef={floatingVideoRef}
-          isVisible={isRecording && recordingType === "camera"}
-          cameraResolution={cameraResolution}
+          selectedAudioDevice={selectedAudioDevice}
+          setSelectedAudioDevice={setSelectedAudioDevice}
         />
       </div>
     </div>

@@ -1,13 +1,13 @@
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Label } from "@/components/ui/label";
-import { Camera, Monitor } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useState, useEffect } from "react";
 import DeviceSelector from "./DeviceSelector";
 import ResolutionSelector from "./ResolutionSelector";
 import { useToast } from "./ui/use-toast";
+import VideoPreview from "./VideoPreview";
+import RecordingTypeSelector from "./RecordingTypeSelector";
+import { useDevicePermissions } from "@/hooks/useDevicePermissions";
 
 interface RecordingModalProps {
   isOpen: boolean;
@@ -19,6 +19,8 @@ interface RecordingModalProps {
   isPreviewActive: boolean;
   cameraResolution: "landscape" | "portrait";
   setCameraResolution: (resolution: "landscape" | "portrait") => void;
+  selectedAudioDevice: string;
+  setSelectedAudioDevice: (deviceId: string) => void;
 }
 
 const RecordingModal = ({
@@ -31,15 +33,22 @@ const RecordingModal = ({
   isPreviewActive,
   cameraResolution,
   setCameraResolution,
+  selectedAudioDevice,
+  setSelectedAudioDevice,
 }: RecordingModalProps) => {
   const [videoDevices, setVideoDevices] = useState<MediaDeviceInfo[]>([]);
   const [audioDevices, setAudioDevices] = useState<MediaDeviceInfo[]>([]);
   const [selectedVideoDevice, setSelectedVideoDevice] = useState<string>("");
-  const [selectedAudioDevice, setSelectedAudioDevice] = useState<string>("");
   const { toast } = useToast();
+  const { hasPermissions, checkPermissions } = useDevicePermissions();
 
   const updateDevices = async () => {
     try {
+      if (!hasPermissions) {
+        const granted = await checkPermissions();
+        if (!granted) return;
+      }
+
       const devices = await navigator.mediaDevices.enumerateDevices();
       
       const videoInputs = devices.filter(device => device.kind === 'videoinput' && device.deviceId);
@@ -53,16 +62,10 @@ const RecordingModal = ({
       setVideoDevices(videoInputs);
       setAudioDevices(audioInputs);
       
-      // Set default devices only if none are selected and devices are available
       if (!selectedVideoDevice && videoInputs.length > 0) {
         const defaultDevice = videoInputs[0];
         console.log('Setting default video device:', defaultDevice.label);
         setSelectedVideoDevice(defaultDevice.deviceId);
-      }
-      if (!selectedAudioDevice && audioInputs.length > 0) {
-        const defaultDevice = audioInputs[0];
-        console.log('Setting default audio device:', defaultDevice.label);
-        setSelectedAudioDevice(defaultDevice.deviceId);
       }
     } catch (error) {
       console.error('Error accessing media devices:', error);
@@ -76,33 +79,19 @@ const RecordingModal = ({
 
   useEffect(() => {
     if (isOpen) {
-      // Request initial permissions and enumerate devices
-      navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-        .then(() => updateDevices())
-        .catch((error) => {
-          console.error('Error accessing media:', error);
-          toast({
-            variant: "destructive",
-            title: "Permission Error",
-            description: "Please grant camera and microphone permissions.",
-          });
-        });
-
-      // Listen for device changes
+      updateDevices();
       navigator.mediaDevices.addEventListener('devicechange', updateDevices);
       return () => {
         navigator.mediaDevices.removeEventListener('devicechange', updateDevices);
       };
     }
-  }, [isOpen]);
+  }, [isOpen, hasPermissions]);
 
-  // Effect to handle device selection changes
   useEffect(() => {
     const updatePreview = async () => {
-      if (!isPreviewActive || recordingType !== "camera") return;
+      if (!isPreviewActive || recordingType !== "camera" || !hasPermissions) return;
 
       try {
-        // Stop existing tracks
         if (previewVideoRef.current?.srcObject instanceof MediaStream) {
           previewVideoRef.current.srcObject.getTracks().forEach(track => track.stop());
         }
@@ -112,7 +101,6 @@ const RecordingModal = ({
           audio: selectedAudioDevice
         });
 
-        // Get new stream with selected devices
         const stream = await navigator.mediaDevices.getUserMedia({
           video: selectedVideoDevice ? {
             deviceId: { exact: selectedVideoDevice },
@@ -130,20 +118,23 @@ const RecordingModal = ({
 
         if (previewVideoRef.current) {
           previewVideoRef.current.srcObject = stream;
+          await previewVideoRef.current.play();
+          
           console.log('Preview updated with new devices');
+          
+          const audioTrack = stream.getAudioTracks()[0];
+          if (audioTrack) {
+            const settings = audioTrack.getSettings();
+            console.log('Preview audio track settings:', settings);
+          }
         }
       } catch (error) {
         console.error('Error updating preview:', error);
-        toast({
-          variant: "destructive",
-          title: "Preview Error",
-          description: "Failed to update preview with selected devices.",
-        });
       }
     };
 
     updatePreview();
-  }, [selectedVideoDevice, selectedAudioDevice, isPreviewActive, recordingType, cameraResolution]);
+  }, [selectedVideoDevice, selectedAudioDevice, isPreviewActive, recordingType, cameraResolution, hasPermissions]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -155,33 +146,10 @@ const RecordingModal = ({
             <div className="space-y-6 p-6">
               <p className="text-gray-400 text-center">Choose what you want to record</p>
 
-              <RadioGroup
-                value={recordingType}
-                onValueChange={(value: "camera" | "screen") => setRecordingType(value)}
-                className="grid grid-cols-1 gap-4"
-              >
-                <div className="flex items-center space-x-4 p-4 rounded-lg border border-gray-700 hover:bg-gray-800 cursor-pointer">
-                  <RadioGroupItem value="camera" id="camera" className="border-white text-white" />
-                  <Label htmlFor="camera" className="flex items-center space-x-3 cursor-pointer">
-                    <Camera className="w-5 h-5" />
-                    <div>
-                      <div className="font-medium">Camera Only</div>
-                      <div className="text-sm text-gray-400">Record yourself using your webcam</div>
-                    </div>
-                  </Label>
-                </div>
-
-                <div className="flex items-center space-x-4 p-4 rounded-lg border border-gray-700 hover:bg-gray-800 cursor-pointer">
-                  <RadioGroupItem value="screen" id="screen" className="border-white text-white" />
-                  <Label htmlFor="screen" className="flex items-center space-x-3 cursor-pointer">
-                    <Monitor className="w-5 h-5" />
-                    <div>
-                      <div className="font-medium">Screen Only</div>
-                      <div className="text-sm text-gray-400">Record your screen</div>
-                    </div>
-                  </Label>
-                </div>
-              </RadioGroup>
+              <RecordingTypeSelector
+                recordingType={recordingType}
+                setRecordingType={setRecordingType}
+              />
 
               {recordingType === "camera" && (
                 <>
@@ -209,15 +177,10 @@ const RecordingModal = ({
               )}
 
               {isPreviewActive && (
-                <div className={`relative ${cameraResolution === "portrait" ? "w-[240px] h-[427px]" : "w-full aspect-video"} mx-auto bg-gray-800 rounded-lg overflow-hidden`}>
-                  <video
-                    ref={previewVideoRef}
-                    autoPlay
-                    playsInline
-                    muted
-                    className="w-full h-full object-cover [transform:scaleX(-1)]"
-                  />
-                </div>
+                <VideoPreview
+                  previewVideoRef={previewVideoRef}
+                  cameraResolution={cameraResolution}
+                />
               )}
             </div>
           </ScrollArea>

@@ -2,7 +2,6 @@ import { Layers, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Layer } from '@/types/editor';
-import { AudioTrack } from './editor/AudioTrack';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -50,11 +49,21 @@ export const VideoLayers = ({
         {layers.map((layer) => (
           <div key={layer.id} className="mb-2">
             {layer.type === 'audio' ? (
-              <AudioTrack
-                layer={layer}
-                onVolumeChange={onVolumeChange}
-                onMuteToggle={onMuteToggle}
-              />
+              <div className="p-2 bg-gray-700 rounded flex justify-between items-center">
+                <span>{layer.name}</span>
+                <div className="flex items-center space-x-2">
+                  <input 
+                    type="range" 
+                    min="0" 
+                    max="100" 
+                    value={layer.volume * 100} 
+                    onChange={(e) => onVolumeChange(layer.id, Number(e.target.value) / 100)}
+                  />
+                  <button onClick={() => onMuteToggle(layer.id)}>
+                    {layer.muted ? 'Unmute' : 'Mute'}
+                  </button>
+                </div>
+              </div>
             ) : (
               <div className="p-2 bg-gray-700 rounded flex justify-between items-center">
                 <span>{layer.name}</span>

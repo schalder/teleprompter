@@ -1,7 +1,6 @@
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { TimelineClip } from '@/types/editor';
 import { useState } from 'react';
-import { DraggableClip } from './editor/DraggableClip';
 
 interface ClipsListProps {
   clips: TimelineClip[];
@@ -39,17 +38,20 @@ export const ClipsList = ({
       <h3 className="text-lg font-medium mb-2">Clips</h3>
       <ScrollArea className="h-[200px]">
         {clips.map((clip, index) => (
-          <DraggableClip
-            key={clip.id}
-            clip={clip}
-            index={index}
-            onDragStart={handleDragStart}
-            onDragOver={handleDragOver}
+          <div 
+            key={clip.id} 
+            draggable 
+            onDragStart={() => handleDragStart(index)}
+            onDragOver={(e) => handleDragOver(e, index)}
             onDragEnd={handleDragEnd}
-            onPreviewClip={onPreviewClip}
-            onDeleteClip={onDeleteClip}
-            isDragging={draggedIndex === index}
-          />
+            className="p-2 bg-gray-700 rounded flex justify-between items-center mb-2"
+          >
+            <span>{clip.name}</span>
+            <div className="flex space-x-2">
+              <button onClick={() => onPreviewClip(clip.startTime)}>Preview</button>
+              <button onClick={() => onDeleteClip(clip.id)}>Delete</button>
+            </div>
+          </div>
         ))}
       </ScrollArea>
     </div>

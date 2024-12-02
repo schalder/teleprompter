@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 
 interface FloatingCameraProps {
   videoRef: React.RefObject<HTMLVideoElement>;
@@ -6,6 +6,14 @@ interface FloatingCameraProps {
 }
 
 const FloatingCamera = ({ videoRef, isVisible }: FloatingCameraProps) => {
+  useEffect(() => {
+    if (videoRef.current) {
+      videoRef.current.play().catch(error => {
+        console.error('Error playing floating camera:', error);
+      });
+    }
+  }, [videoRef.current?.srcObject]);
+
   if (!isVisible) return null;
 
   return (

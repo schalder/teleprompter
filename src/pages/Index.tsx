@@ -41,13 +41,11 @@ const Index = () => {
 
   // Effect to handle floating camera stream
   useEffect(() => {
-    if (isRecording && recordingType === "camera" && floatingVideoRef.current) {
-      const stream = previewVideoRef.current?.srcObject as MediaStream;
-      if (stream) {
-        floatingVideoRef.current.srcObject = stream;
-      }
+    if (isRecording && recordingType === "camera" && floatingVideoRef.current && previewStream) {
+      floatingVideoRef.current.srcObject = previewStream;
+      console.log('Setting floating camera stream:', previewStream.id);
     }
-  }, [isRecording, recordingType, previewVideoRef]);
+  }, [isRecording, recordingType, previewStream]);
 
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });

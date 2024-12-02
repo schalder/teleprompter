@@ -30,6 +30,9 @@ const FloatingCamera = ({ videoRef, isVisible, cameraResolution }: FloatingCamer
         if (!hasAttemptedPlay.current) {
           hasAttemptedPlay.current = true;
           
+          // Ensure video is muted
+          videoRef.current.muted = true;
+          
           // Wait for metadata to load first
           if (videoRef.current.readyState === 0) {
             await new Promise<void>((resolve) => {
@@ -48,7 +51,8 @@ const FloatingCamera = ({ videoRef, isVisible, cameraResolution }: FloatingCamer
           console.log('Floating camera playing successfully', {
             readyState: videoRef.current.readyState,
             videoWidth: videoRef.current.videoWidth,
-            videoHeight: videoRef.current.videoHeight
+            videoHeight: videoRef.current.videoHeight,
+            muted: videoRef.current.muted
           });
         }
       } catch (error) {

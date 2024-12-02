@@ -16,7 +16,7 @@ export const SimpleVideoEditor = ({ videoUrl }: SimpleVideoEditorProps) => {
   const [audioTrack, setAudioTrack] = useState<string | null>(null);
 
   const handleSeek = (time: number) => {
-    if (videoRef.current) {
+    if (videoRef.current && isFinite(time) && time >= 0 && time <= duration) {
       videoRef.current.currentTime = time;
       setCurrentTime(time);
     }

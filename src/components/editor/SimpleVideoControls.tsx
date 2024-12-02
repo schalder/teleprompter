@@ -36,6 +36,13 @@ export const SimpleVideoControls = ({
     }
   };
 
+  const handleSeek = (value: number[]) => {
+    const newTime = value[0];
+    if (isFinite(newTime) && newTime >= 0 && newTime <= duration) {
+      onSeek(newTime);
+    }
+  };
+
   return (
     <div className="space-y-4 p-4 border border-gray-700 rounded-lg">
       <div className="flex items-center gap-4">
@@ -45,9 +52,9 @@ export const SimpleVideoControls = ({
         <Slider
           value={[currentTime]}
           min={0}
-          max={duration}
+          max={duration || 100}
           step={0.1}
-          onValueChange={(value) => onSeek(value[0])}
+          onValueChange={handleSeek}
           className="w-full"
         />
       </div>

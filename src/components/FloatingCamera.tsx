@@ -1,4 +1,5 @@
 import React, { useEffect } from "react";
+import { useToast } from "@/components/ui/use-toast";
 
 interface FloatingCameraProps {
   videoRef: React.RefObject<HTMLVideoElement>;
@@ -7,10 +8,11 @@ interface FloatingCameraProps {
 }
 
 const FloatingCamera = ({ videoRef, isVisible, cameraResolution }: FloatingCameraProps) => {
+  const { toast } = useToast();
+
   useEffect(() => {
     const playVideo = async () => {
       if (videoRef.current && videoRef.current.srcObject) {
-        console.log('Attempting to play floating camera');
         try {
           await videoRef.current.play();
           console.log('Floating camera playing successfully');
@@ -31,14 +33,21 @@ const FloatingCamera = ({ videoRef, isVisible, cameraResolution }: FloatingCamer
           });
         } catch (error) {
           console.error('Error playing floating camera:', error);
+          toast({
+            variant: "destructive",
+            title: "Camera Preview Error",
+            description: "Failed to display camera preview. Please check your camera settings."
+          });
         }
       } else {
         console.log('No video source available for floating camera');
       }
     };
 
-    playVideo();
-  }, [videoRef.current?.srcObject]);
+    if (isVisible) {
+      playVideo();
+    }
+  }, [videoRef.current?.srcObject, isVisible, toast]);
 
   if (!isVisible) {
     return null;
@@ -49,24 +58,23 @@ const FloatingCamera = ({ videoRef, isVisible, cameraResolution }: FloatingCamer
     ? "w-[135px] h-[240px]"  // Portrait dimensions (9:16 ratio)
     : "w-[240px] h-[135px]"; // Landscape dimensions (16:9 ratio)
 
-  console.log('Floating camera rendering with resolution:', cameraResolution);
-  console.log('Container classes:', containerClasses);
-  console.log('Stream object:', videoRef.current?.srcObject ? 'Present' : 'Missing');
-
   return (
     <div 
-      className={`fixed bottom-4 right-4 z-[100] ${containerClasses} rounded-2xl overflow-hidden shadow-lg`}
-      style={{
-        backgroundColor: 'rgba(0, 0, 0, 0.1)',
-        backdropFilter: 'blur(2px)'
-      }}
+      className={`fixed bottom-4 right-4 z-[100] ${containerClasses} rounded-2xl overflow-hidden bg-black/10`}
     >
       <video
         ref={videoRef}
         autoPlay
         playsInline
         muted
-        className="absolute inset-0 w-full h-full object-cover [transform:scaleX(-1)]"
+        className="w-full h-full object-cover [transform:scaleX(-1)]"
+      />
+      <div 
+        className="absolute inset-0"
+        style={{
+          backdropFilter: 'blur(2px)',
+          pointerEvents: 'none'
+        }}
       />
     </div>
   );

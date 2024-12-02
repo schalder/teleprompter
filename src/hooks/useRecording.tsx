@@ -28,11 +28,13 @@ export const useRecording = () => {
         channelCount: 2
       };
 
-      // First check permissions
-      if (recordingType === "camera") {
-        const permissions = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
-        permissions.getTracks().forEach(track => track.stop());
-
+      // Check if there's an existing preview stream we can reuse
+      const existingVideoElement = document.querySelector('video');
+      if (recordingType === "camera" && existingVideoElement?.srcObject instanceof MediaStream) {
+        console.log('Reusing existing camera stream');
+        finalStream = existingVideoElement.srcObject;
+      } else if (recordingType === "camera") {
+        console.log('Creating new camera stream');
         finalStream = await navigator.mediaDevices.getUserMedia({
           video: {
             ...videoConstraints,

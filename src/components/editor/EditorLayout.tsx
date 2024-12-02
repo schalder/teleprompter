@@ -32,6 +32,7 @@ interface EditorLayoutProps {
   onSeek: (value: number[]) => void;
   onReorder: (startIndex: number, endIndex: number) => void;
   onPreviewClip: (startTime: number) => void;
+  onDeleteRange: (start: number, end: number) => void;
   clips: TimelineClip[];
 }
 
@@ -61,6 +62,7 @@ export const EditorLayout = ({
   onSeek,
   onReorder,
   onPreviewClip,
+  onDeleteRange,
   clips,
 }: EditorLayoutProps) => {
   return (
@@ -68,7 +70,6 @@ export const EditorLayout = ({
       <EditorHeader />
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Video Preview and Timeline Section - Takes up 3 columns */}
         <div className="lg:col-span-3 space-y-6">
           <VideoPreview
             videoRef={videoRef}
@@ -99,13 +100,15 @@ export const EditorLayout = ({
             <VideoSplitControls
               onSplit={onSplit}
               currentTime={currentTime}
+              duration={duration}
+              onDeleteRange={onDeleteRange}
             />
           </div>
         </div>
 
-        {/* Sidebar - Takes up 1 column */}
         <div className="lg:col-span-1">
           <EditorSidebar
+            videoRef={videoRef}
             layers={layers}
             onToggleLayer={onToggleLayer}
             onEffectChange={onEffectChange}

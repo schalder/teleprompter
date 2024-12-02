@@ -5,6 +5,7 @@ import { CropResizeControls } from './CropResizeControls';
 import { Layer } from '@/types/editor';
 
 interface EditorSidebarProps {
+  videoRef: React.RefObject<HTMLVideoElement>;
   layers: Layer[];
   onToggleLayer: (id: string) => void;
   onEffectChange: (effect: string, value: number) => void;
@@ -17,6 +18,7 @@ interface EditorSidebarProps {
 }
 
 export const EditorSidebar = ({
+  videoRef,
   layers,
   onToggleLayer,
   onEffectChange,
@@ -31,6 +33,7 @@ export const EditorSidebar = ({
     <div className="bg-gray-800 p-4 rounded-lg space-y-4">
       <ExportOptions onExport={onExport} />
       <CropResizeControls
+        videoRef={videoRef}
         onCropChange={onCropChange}
         onResizeChange={onResizeChange}
       />

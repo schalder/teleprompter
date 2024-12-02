@@ -71,6 +71,11 @@ const VideoEditor = () => {
         };
       });
     });
+
+    toast({
+      title: "Range Deleted",
+      description: `Deleted video range from ${start.toFixed(2)}s to ${end.toFixed(2)}s`,
+    });
   };
 
   const handleUndo = () => {
@@ -195,10 +200,20 @@ const VideoEditor = () => {
         onResizeChange={handleResizeChange}
         onSeek={value => handlePreviewClip(value[0])}
         onDeleteRange={handleDeleteRange}
-        onUndo={handleUndo}
-        onRedo={handleRedo}
-        undoable={undoStack.length > 0}
-        redoable={redoStack.length > 0}
+        onReorder={(startIndex, endIndex) => {
+          const currentLayer = layers.find(l => l.type === 'video');
+          if (currentLayer) {
+            const newClips = [...currentLayer.clips];
+            const [removed] = newClips.splice(startIndex, 1);
+            newClips.splice(endIndex, 0, removed);
+            setLayers(prevLayers =>
+              prevLayers.map(layer =>
+                layer.type === 'video' ? { ...layer, clips: newClips } : layer
+              )
+            );
+          }
+        }}
+        onPreviewClip={handlePreviewClip}
         clips={layers.find(l => l.type === 'video')?.clips || []}
       />
     </div>

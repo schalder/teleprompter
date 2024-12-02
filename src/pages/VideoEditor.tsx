@@ -196,6 +196,13 @@ const VideoEditor = () => {
     }
   };
 
+  const handleVolumeChangeArray = (values: number[]) => {
+    setVolume(values[0]);
+    if (videoRef.current) {
+      videoRef.current.volume = values[0];
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-900 text-white">
       <KeyboardShortcuts
@@ -223,7 +230,7 @@ const VideoEditor = () => {
                 onSplit={handleSplitAtCurrentTime}
                 onTimeUpdate={handleTimeUpdate}
                 onEnded={() => setIsPlaying(false)}
-                onVolumeChange={setVolume}
+                onVolumeChange={handleVolumeChangeArray}
                 onMuteToggle={() => setIsMuted(!isMuted)}
               />
 

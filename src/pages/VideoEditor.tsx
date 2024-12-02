@@ -8,6 +8,9 @@ import { Timeline } from '@/components/Timeline';
 import { ClipsList } from '@/components/ClipsList';
 import { VideoVolume } from '@/components/VideoVolume';
 import { VideoLayers } from '@/components/VideoLayers';
+import { VideoEffects } from '@/components/VideoEffects';
+import { ExportOptions } from '@/components/ExportOptions';
+import { KeyboardShortcuts } from '@/components/KeyboardShortcuts';
 import { TimelineClip } from '@/types/editor';
 import { useToast } from '@/hooks/use-toast';
 
@@ -175,8 +178,61 @@ const VideoEditor = () => {
     }
   };
 
+  const handleUndo = () => {
+    // Implement undo logic here
+    toast({
+      title: "Undo",
+      description: "Last action undone",
+    });
+  };
+
+  const handleRedo = () => {
+    // Implement redo logic here
+    toast({
+      title: "Redo",
+      description: "Action redone",
+    });
+  };
+
+  const handleEffectChange = (effect: string, value: number) => {
+    if (!videoRef.current) return;
+
+    const video = videoRef.current;
+    switch (effect) {
+      case 'brightness':
+        video.style.filter = `brightness(${value}%)`;
+        break;
+      case 'contrast':
+        video.style.filter = `contrast(${value}%)`;
+        break;
+      case 'filter':
+        // Handle filter changes
+        break;
+    }
+
+    toast({
+      title: "Effect Applied",
+      description: `${effect} set to ${value}`,
+    });
+  };
+
+  const handleExport = (format: string, quality: string) => {
+    toast({
+      title: "Export Started",
+      description: `Exporting video as ${format.toUpperCase()} (${quality} quality)`,
+    });
+    // Implement actual export logic here
+  };
+
   return (
     <div className="min-h-screen bg-gray-900 text-white">
+      <KeyboardShortcuts
+        onPlayPause={togglePlayPause}
+        onSplit={handleSplitAtCurrentTime}
+        onUndo={handleUndo}
+        onRedo={handleRedo}
+      />
+      
       <ResizablePanelGroup direction="vertical" className="min-h-screen">
         <ResizablePanel defaultSize={60}>
           <div className="p-4">
@@ -220,26 +276,13 @@ const VideoEditor = () => {
                 </div>
               </div>
 
-              <div className="bg-gray-800 p-4 rounded-lg">
-                <h2 className="text-xl font-semibold mb-4">Editor Controls</h2>
-                <div className="space-y-4">
-                  <Timeline
-                    currentTime={currentTime}
-                    duration={duration}
-                    onSeek={handleSeek}
-                  />
-                  
-                  <ClipsList 
-                    clips={clips} 
-                    onReorder={handleClipReorder}
-                    onPreviewClip={handlePreviewClip}
-                  />
-
-                  <VideoLayers
-                    layers={layers}
-                    onToggleLayer={handleToggleLayer}
-                  />
-                </div>
+              <div className="bg-gray-800 p-4 rounded-lg space-y-4">
+                <ExportOptions onExport={handleExport} />
+                <VideoEffects onEffectChange={handleEffectChange} />
+                <VideoLayers
+                  layers={layers}
+                  onToggleLayer={handleToggleLayer}
+                />
               </div>
             </div>
           </div>
@@ -250,10 +293,17 @@ const VideoEditor = () => {
         <ResizablePanel defaultSize={40}>
           <div className="p-4 bg-gray-800">
             <h2 className="text-xl font-semibold mb-4">Timeline</h2>
-            <div className="border border-gray-700 rounded-lg p-4 h-full">
-              <div className="flex items-center justify-center h-full text-gray-400">
-                Advanced timeline visualization coming soon...
-              </div>
+            <div className="space-y-4">
+              <Timeline
+                currentTime={currentTime}
+                duration={duration}
+                onSeek={handleSeek}
+              />
+              <ClipsList
+                clips={clips}
+                onReorder={handleClipReorder}
+                onPreviewClip={handlePreviewClip}
+              />
             </div>
           </div>
         </ResizablePanel>

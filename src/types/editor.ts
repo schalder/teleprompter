@@ -9,3 +9,13 @@ export interface Layer {
   name: string;
   visible: boolean;
 }
+
+export interface VideoEffect {
+  type: 'filter' | 'brightness' | 'contrast';
+  value: number;
+}
+
+export interface ExportSettings {
+  format: 'mp4' | 'webm' | 'gif';
+  quality: 'high' | 'medium' | 'low';
+}

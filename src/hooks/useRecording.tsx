@@ -39,26 +39,17 @@ export const useRecording = () => {
         if (existingVideoElement?.srcObject instanceof MediaStream) {
           console.log('Reusing existing camera stream');
           existingVideoElement.srcObject.getTracks().forEach(track => track.stop());
-          
-          finalStream = await navigator.mediaDevices.getUserMedia({
-            video: {
-              ...videoConstraints,
-              facingMode: "user"
-            },
-            audio: audioConstraints
-          });
-        } else {
-          console.log('Creating new camera stream with resolution:', videoConstraints);
-          finalStream = await navigator.mediaDevices.getUserMedia({
-            video: {
-              ...videoConstraints,
-              facingMode: "user"
-            },
-            audio: audioConstraints
-          });
         }
+        
+        console.log('Creating new camera stream with resolution:', videoConstraints);
+        finalStream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            ...videoConstraints,
+            facingMode: "user"
+          },
+          audio: audioConstraints
+        });
       } else {
-        // Only request new screen capture if we don't have an existing stream
         finalStream = await navigator.mediaDevices.getDisplayMedia({
           video: {
             width: { ideal: 1920 },
@@ -68,6 +59,18 @@ export const useRecording = () => {
           audio: audioConstraints
         });
       }
+
+      // Wait for the stream to be ready
+      await new Promise((resolve) => {
+        const videoTrack = finalStream.getVideoTracks()[0];
+        if (videoTrack.readyState === 'live') {
+          resolve(true);
+        } else {
+          videoTrack.onended = () => resolve(false);
+          videoTrack.onmute = () => resolve(false);
+          videoTrack.onunmute = () => resolve(true);
+        }
+      });
 
       const options = {
         mimeType: 'video/webm;codecs=h264,opus',
@@ -102,7 +105,10 @@ export const useRecording = () => {
         });
       };
 
+      // Small delay to ensure everything is ready
+      await new Promise(resolve => setTimeout(resolve, 100));
       mediaRecorder.start(1000);
+      
       toast({
         title: "Recording started",
         description: "Click Stop when you're done recording.",

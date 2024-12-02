@@ -76,7 +76,7 @@ const RecordingModal = ({
                 className="grid grid-cols-1 gap-4"
               >
                 <div className="flex items-center space-x-4 p-4 rounded-lg border border-gray-700 hover:bg-gray-800 cursor-pointer">
-                  <RadioGroupItem value="camera" id="camera" />
+                  <RadioGroupItem value="camera" id="camera" className="border-white text-white" />
                   <Label htmlFor="camera" className="flex items-center space-x-3 cursor-pointer">
                     <Camera className="w-5 h-5" />
                     <div>
@@ -87,7 +87,7 @@ const RecordingModal = ({
                 </div>
 
                 <div className="flex items-center space-x-4 p-4 rounded-lg border border-gray-700 hover:bg-gray-800 cursor-pointer">
-                  <RadioGroupItem value="screen" id="screen" />
+                  <RadioGroupItem value="screen" id="screen" className="border-white text-white" />
                   <Label htmlFor="screen" className="flex items-center space-x-3 cursor-pointer">
                     <Monitor className="w-5 h-5" />
                     <div>
@@ -142,11 +142,11 @@ const RecordingModal = ({
                       className="grid grid-cols-1 gap-4"
                     >
                     <div className="flex items-center space-x-4 p-4 rounded-lg border border-gray-700 hover:bg-gray-800 cursor-pointer">
-                      <RadioGroupItem value="landscape" id="landscape" />
+                      <RadioGroupItem value="landscape" id="landscape" className="border-white text-white" />
                       <Label htmlFor="landscape" className="cursor-pointer">1920x1080 (Landscape)</Label>
                     </div>
                     <div className="flex items-center space-x-4 p-4 rounded-lg border border-gray-700 hover:bg-gray-800 cursor-pointer">
-                      <RadioGroupItem value="portrait" id="portrait" />
+                      <RadioGroupItem value="portrait" id="portrait" className="border-white text-white" />
                       <Label htmlFor="portrait" className="cursor-pointer">1080x1920 (Portrait)</Label>
                     </div>
                     </RadioGroup>

@@ -26,6 +26,14 @@ const FloatingCamera = ({ videoRef, isVisible, cameraResolution }: FloatingCamer
     ? "w-[135px] h-[240px]"  // Portrait dimensions (swapped)
     : "w-[240px] h-[135px]"; // Landscape dimensions (original)
 
+  const videoClasses = cameraResolution === "portrait"
+    ? "w-full h-full object-cover [transform:scaleX(-1)]"
+    : "w-full h-full object-cover [transform:scaleX(-1)]";
+
+  console.log('Floating camera rendering with resolution:', cameraResolution);
+  console.log('Container classes:', containerClasses);
+  console.log('Video element classes:', videoClasses);
+
   return (
     <div className={`fixed bottom-4 right-4 z-50 ${containerClasses} bg-gray-900 rounded-lg overflow-hidden shadow-lg`}>
       <video
@@ -33,7 +41,7 @@ const FloatingCamera = ({ videoRef, isVisible, cameraResolution }: FloatingCamer
         autoPlay
         playsInline
         muted
-        className="w-full h-full object-cover [transform:scaleX(-1)]"
+        className={videoClasses}
       />
     </div>
   );

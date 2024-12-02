@@ -1,18 +1,13 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { ArrowLeft } from 'lucide-react';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
-import { VideoControls } from '@/components/VideoControls';
-import { Timeline } from '@/components/Timeline';
-import { ClipsList } from '@/components/ClipsList';
-import { VideoVolume } from '@/components/VideoVolume';
-import { VideoLayers } from '@/components/VideoLayers';
-import { VideoEffects } from '@/components/VideoEffects';
-import { ExportOptions } from '@/components/ExportOptions';
 import { KeyboardShortcuts } from '@/components/KeyboardShortcuts';
 import { TimelineClip } from '@/types/editor';
 import { useToast } from '@/hooks/use-toast';
+import { EditorHeader } from '@/components/editor/EditorHeader';
+import { VideoPreview } from '@/components/editor/VideoPreview';
+import { EditorSidebar } from '@/components/editor/EditorSidebar';
+import { TimelineSection } from '@/components/editor/TimelineSection';
 
 const VideoEditor = () => {
   const location = useLocation();
@@ -122,14 +117,6 @@ const VideoEditor = () => {
     });
   };
 
-  const handleSeek = (value: number[]) => {
-    if (videoRef.current && typeof value[0] === 'number' && isFinite(value[0])) {
-      const newTime = Math.max(0, Math.min(value[0], duration));
-      videoRef.current.currentTime = newTime;
-      setCurrentTime(newTime);
-    }
-  };
-
   const handleVolumeChange = (value: number[]) => {
     if (videoRef.current && typeof value[0] === 'number') {
       const newVolume = value[0];
@@ -156,41 +143,6 @@ const VideoEditor = () => {
     toast({
       title: "Layer visibility toggled",
       description: `Layer ${id} visibility updated`,
-    });
-  };
-
-  const handleClipReorder = (startIndex: number, endIndex: number) => {
-    setClips(prevClips => {
-      const newClips = [...prevClips];
-      const [removed] = newClips.splice(startIndex, 1);
-      newClips.splice(endIndex, 0, removed);
-      return newClips;
-    });
-  };
-
-  const handlePreviewClip = (startTime: number) => {
-    if (videoRef.current) {
-      videoRef.current.currentTime = startTime;
-      setCurrentTime(startTime);
-      if (!isPlaying) {
-        togglePlayPause();
-      }
-    }
-  };
-
-  const handleUndo = () => {
-    // Implement undo logic here
-    toast({
-      title: "Undo",
-      description: "Last action undone",
-    });
-  };
-
-  const handleRedo = () => {
-    // Implement redo logic here
-    toast({
-      title: "Redo",
-      description: "Action redone",
     });
   };
 
@@ -224,66 +176,62 @@ const VideoEditor = () => {
     // Implement actual export logic here
   };
 
+  const handleClipReorder = (startIndex: number, endIndex: number) => {
+    setClips(prevClips => {
+      const newClips = [...prevClips];
+      const [removed] = newClips.splice(startIndex, 1);
+      newClips.splice(endIndex, 0, removed);
+      return newClips;
+    });
+  };
+
+  const handlePreviewClip = (startTime: number) => {
+    if (videoRef.current) {
+      videoRef.current.currentTime = startTime;
+      setCurrentTime(startTime);
+      if (!isPlaying) {
+        togglePlayPause();
+      }
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-900 text-white">
       <KeyboardShortcuts
         onPlayPause={togglePlayPause}
         onSplit={handleSplitAtCurrentTime}
-        onUndo={handleUndo}
-        onRedo={handleRedo}
+        onUndo={() => {}}
+        onRedo={() => {}}
       />
       
       <ResizablePanelGroup direction="vertical" className="min-h-screen">
         <ResizablePanel defaultSize={60}>
           <div className="p-4">
-            <div className="flex items-center mb-6">
-              <Button
-                variant="ghost"
-                onClick={() => navigate(-1)}
-                className="mr-4"
-              >
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back
-              </Button>
-              <h1 className="text-2xl font-bold">Video Editor</h1>
-            </div>
+            <EditorHeader />
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2 space-y-4">
-                <div className="relative aspect-video bg-black rounded-lg overflow-hidden">
-                  <video
-                    ref={videoRef}
-                    src={videoUrl}
-                    className="w-full h-full"
-                    onTimeUpdate={handleTimeUpdate}
-                    onEnded={() => setIsPlaying(false)}
-                  />
-                </div>
-                
-                <div className="flex gap-4">
-                  <VideoControls
-                    isPlaying={isPlaying}
-                    onPlayPause={togglePlayPause}
-                    onReset={handleReset}
-                    onSplit={handleSplitAtCurrentTime}
-                  />
-                  <VideoVolume
-                    volume={volume}
-                    onVolumeChange={handleVolumeChange}
-                    onMuteToggle={handleMuteToggle}
-                    isMuted={isMuted}
-                  />
-                </div>
-              </div>
+              <VideoPreview
+                videoRef={videoRef}
+                videoUrl={videoUrl}
+                isPlaying={isPlaying}
+                currentTime={currentTime}
+                volume={volume}
+                isMuted={isMuted}
+                onPlayPause={togglePlayPause}
+                onReset={handleReset}
+                onSplit={handleSplitAtCurrentTime}
+                onTimeUpdate={handleTimeUpdate}
+                onEnded={() => setIsPlaying(false)}
+                onVolumeChange={handleVolumeChange}
+                onMuteToggle={handleMuteToggle}
+              />
 
-              <div className="bg-gray-800 p-4 rounded-lg space-y-4">
-                <ExportOptions onExport={handleExport} />
-                <VideoEffects onEffectChange={handleEffectChange} />
-                <VideoLayers
-                  layers={layers}
-                  onToggleLayer={handleToggleLayer}
-                />
-              </div>
+              <EditorSidebar
+                layers={layers}
+                onToggleLayer={handleToggleLayer}
+                onEffectChange={handleEffectChange}
+                onExport={handleExport}
+              />
             </div>
           </div>
         </ResizablePanel>
@@ -291,21 +239,14 @@ const VideoEditor = () => {
         <ResizableHandle />
 
         <ResizablePanel defaultSize={40}>
-          <div className="p-4 bg-gray-800">
-            <h2 className="text-xl font-semibold mb-4">Timeline</h2>
-            <div className="space-y-4">
-              <Timeline
-                currentTime={currentTime}
-                duration={duration}
-                onSeek={handleSeek}
-              />
-              <ClipsList
-                clips={clips}
-                onReorder={handleClipReorder}
-                onPreviewClip={handlePreviewClip}
-              />
-            </div>
-          </div>
+          <TimelineSection
+            currentTime={currentTime}
+            duration={duration}
+            clips={clips}
+            onSeek={value => handlePreviewClip(value[0])}
+            onReorder={handleClipReorder}
+            onPreviewClip={handlePreviewClip}
+          />
         </ResizablePanel>
       </ResizablePanelGroup>
     </div>

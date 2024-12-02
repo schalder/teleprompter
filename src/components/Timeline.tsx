@@ -29,6 +29,13 @@ export const Timeline = ({ currentTime, duration, onSeek }: TimelineProps) => {
     onSeek(value);
   };
 
+  const formatTime = (time: number): string => {
+    if (!isFinite(time)) return '0:00';
+    const minutes = Math.floor(time / 60);
+    const seconds = Math.floor(time % 60);
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  };
+
   return (
     <div className="p-4 border border-gray-700 rounded-lg">
       <h3 className="text-lg font-medium mb-2">Timeline</h3>
@@ -41,7 +48,7 @@ export const Timeline = ({ currentTime, duration, onSeek }: TimelineProps) => {
         className="mb-4"
       />
       <div className="text-sm text-gray-400">
-        {sliderValue.toFixed(1)}s / {duration.toFixed(1)}s
+        {formatTime(sliderValue)} / {formatTime(duration)}
       </div>
     </div>
   );

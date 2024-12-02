@@ -7,7 +7,7 @@ import { VideoControls } from '@/components/VideoControls';
 import { Timeline } from '@/components/Timeline';
 import { ClipsList } from '@/components/ClipsList';
 import { TimelineClip } from '@/types/editor';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 
 const VideoEditor = () => {
   const location = useLocation();
@@ -120,6 +120,25 @@ const VideoEditor = () => {
     }
   };
 
+  const handleClipReorder = (startIndex: number, endIndex: number) => {
+    setClips(prevClips => {
+      const newClips = [...prevClips];
+      const [removed] = newClips.splice(startIndex, 1);
+      newClips.splice(endIndex, 0, removed);
+      return newClips;
+    });
+  };
+
+  const handlePreviewClip = (startTime: number) => {
+    if (videoRef.current) {
+      videoRef.current.currentTime = startTime;
+      setCurrentTime(startTime);
+      if (!isPlaying) {
+        togglePlayPause();
+      }
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-900 text-white">
       <ResizablePanelGroup direction="vertical" className="min-h-screen">
@@ -166,7 +185,11 @@ const VideoEditor = () => {
                     onSeek={handleSeek}
                   />
                   
-                  <ClipsList clips={clips} />
+                  <ClipsList 
+                    clips={clips} 
+                    onReorder={handleClipReorder}
+                    onPreviewClip={handlePreviewClip}
+                  />
                 </div>
               </div>
             </div>

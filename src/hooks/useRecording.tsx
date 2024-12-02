@@ -16,7 +16,6 @@ export const useRecording = () => {
     try {
       let finalStream: MediaStream;
 
-      // Set exact resolutions based on orientation
       const videoConstraints = {
         width: { exact: cameraResolution === "landscape" ? 1920 : 1080 },
         height: { exact: cameraResolution === "landscape" ? 1080 : 1920 },
@@ -30,35 +29,30 @@ export const useRecording = () => {
         channelCount: 2
       };
 
-      // If we have an existing stream (like from screen capture), use it
       if (recordingType === "screen" && existingStream) {
         console.log('Using existing screen capture stream for recording');
         finalStream = existingStream;
       } else if (recordingType === "camera") {
-        const existingVideoElement = document.querySelector('video');
-        if (existingVideoElement?.srcObject instanceof MediaStream) {
-          console.log('Reusing existing camera stream');
-          existingVideoElement.srcObject.getTracks().forEach(track => track.stop());
-          
-          finalStream = await navigator.mediaDevices.getUserMedia({
-            video: {
-              ...videoConstraints,
-              facingMode: "user"
-            },
-            audio: audioConstraints
-          });
-        } else {
-          console.log('Creating new camera stream with resolution:', videoConstraints);
-          finalStream = await navigator.mediaDevices.getUserMedia({
-            video: {
-              ...videoConstraints,
-              facingMode: "user"
-            },
-            audio: audioConstraints
-          });
-        }
+        // Get a new stream for camera recording
+        finalStream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            ...videoConstraints,
+            facingMode: "user"
+          },
+          audio: audioConstraints
+        });
+
+        // Wait for the stream to be ready
+        await new Promise<void>((resolve) => {
+          const video = document.createElement('video');
+          video.srcObject = finalStream;
+          video.onloadedmetadata = () => {
+            video.play().then(() => {
+              resolve();
+            });
+          };
+        });
       } else {
-        // Only request new screen capture if we don't have an existing stream
         finalStream = await navigator.mediaDevices.getDisplayMedia({
           video: {
             width: { ideal: 1920 },

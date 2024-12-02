@@ -22,26 +22,29 @@ const FloatingCamera = ({ videoRef, isVisible, cameraResolution }: FloatingCamer
           return;
         }
 
-        // Only attempt to play once per stream
+        // Reset play attempt when stream changes
+        if (hasAttemptedPlay.current && videoRef.current.srcObject !== stream) {
+          hasAttemptedPlay.current = false;
+        }
+
         if (!hasAttemptedPlay.current) {
           hasAttemptedPlay.current = true;
           
-          // Ensure video is ready
-          if (videoRef.current.readyState < 2) {
+          // Wait for metadata to load first
+          if (videoRef.current.readyState === 0) {
             await new Promise<void>((resolve) => {
-              const handleLoadedData = () => {
-                console.log('Video loaded and ready to play');
-                resolve();
-              };
-              videoRef.current!.addEventListener('loadeddata', handleLoadedData, { once: true });
+              videoRef.current!.addEventListener('loadedmetadata', () => resolve(), { once: true });
             });
           }
 
-          await videoRef.current.play().catch(error => {
-            console.error('Error playing video:', error);
-            throw error;
-          });
+          // Then wait for enough data to play
+          if (videoRef.current.readyState < 2) {
+            await new Promise<void>((resolve) => {
+              videoRef.current!.addEventListener('loadeddata', () => resolve(), { once: true });
+            });
+          }
 
+          await videoRef.current.play();
           console.log('Floating camera playing successfully', {
             readyState: videoRef.current.readyState,
             videoWidth: videoRef.current.videoWidth,
@@ -59,16 +62,14 @@ const FloatingCamera = ({ videoRef, isVisible, cameraResolution }: FloatingCamer
     };
 
     if (isVisible && videoRef.current?.srcObject) {
-      // Reset play attempt flag when stream changes
-      hasAttemptedPlay.current = false;
       playVideo();
     }
 
     return () => {
-      hasAttemptedPlay.current = false;
       if (videoRef.current) {
         videoRef.current.pause();
       }
+      hasAttemptedPlay.current = false;
     };
   }, [videoRef.current?.srcObject, isVisible, toast]);
 

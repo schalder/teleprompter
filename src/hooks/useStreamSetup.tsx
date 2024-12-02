@@ -24,24 +24,11 @@ export const useStreamSetup = () => {
         echoCancellation: true,
         noiseSuppression: true,
         sampleRate: 48000,
-        autoGainControl: false,
       } : false
     };
 
     console.log('Requesting media with constraints:', constraints);
     const stream = await navigator.mediaDevices.getUserMedia(constraints);
-    
-    // Configure audio tracks for recording only
-    stream.getAudioTracks().forEach(track => {
-      track.enabled = true; // Enable for recording
-      console.log('Audio track configured:', {
-        id: track.id,
-        enabled: track.enabled,
-        muted: track.muted,
-        readyState: track.readyState
-      });
-    });
-    
     console.log('Stream obtained successfully');
     return stream;
   };

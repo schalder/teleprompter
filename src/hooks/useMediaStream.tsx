@@ -56,14 +56,14 @@ export const useMediaStream = () => {
       }
 
       if (stream) {
-        // Create a new stream with only video tracks for preview
+        // Create a video-only stream for preview
         const videoOnlyStream = new MediaStream(
           stream.getVideoTracks()
         );
         
-        setPreviewStream(stream); // Keep original stream for recording
+        setPreviewStream(stream); // Keep full stream for recording
         if (previewVideoRef.current) {
-          previewVideoRef.current.srcObject = videoOnlyStream; // Use video-only stream for preview
+          previewVideoRef.current.srcObject = videoOnlyStream;
           previewVideoRef.current.muted = true;
           await previewVideoRef.current.play();
           console.log('Preview started successfully');

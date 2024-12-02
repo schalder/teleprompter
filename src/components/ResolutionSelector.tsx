@@ -1,6 +1,6 @@
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { useMobile } from "@/hooks/use-mobile";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface ResolutionSelectorProps {
   cameraResolution: "landscape" | "portrait";
@@ -11,7 +11,7 @@ const ResolutionSelector = ({
   cameraResolution,
   setCameraResolution,
 }: ResolutionSelectorProps) => {
-  const isMobile = useMobile();
+  const isMobile = useIsMobile();
 
   // Force portrait mode on mobile
   if (isMobile && cameraResolution !== "portrait") {

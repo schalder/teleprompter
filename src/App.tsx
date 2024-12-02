@@ -13,7 +13,7 @@ const App: React.FC = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <Toaster />
+        <Toaster position="bottom-center" />
         <Sonner position="bottom-center" />
         <BrowserRouter>
           <Routes>

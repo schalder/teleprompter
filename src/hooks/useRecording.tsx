@@ -30,17 +30,17 @@ export const useRecording = () => {
         channelCount: 2
       };
 
-      // If we have an existing stream (like from screen capture), use it
-      if (recordingType === "screen" && existingStream) {
-        console.log('Using existing screen capture stream for recording');
-        finalStream = existingStream;
-      } else if (recordingType === "camera") {
-        const existingVideoElement = document.querySelector('video');
-        if (existingVideoElement?.srcObject instanceof MediaStream) {
-          console.log('Reusing existing camera stream');
-          existingVideoElement.srcObject.getTracks().forEach(track => track.stop());
-        }
-        
+      // Clean up any existing streams
+      const existingVideoElement = document.querySelector('video');
+      if (existingVideoElement?.srcObject instanceof MediaStream) {
+        console.log('Cleaning up existing stream');
+        existingVideoElement.srcObject.getTracks().forEach(track => {
+          track.stop();
+          console.log(`Stopped track: ${track.kind}`);
+        });
+      }
+
+      if (recordingType === "camera") {
         console.log('Creating new camera stream with resolution:', videoConstraints);
         finalStream = await navigator.mediaDevices.getUserMedia({
           video: {
@@ -60,17 +60,45 @@ export const useRecording = () => {
         });
       }
 
-      // Wait for the stream to be ready
-      await new Promise((resolve) => {
+      // Enhanced stream readiness check
+      await new Promise((resolve, reject) => {
         const videoTrack = finalStream.getVideoTracks()[0];
-        if (videoTrack.readyState === 'live') {
+        const audioTrack = finalStream.getAudioTracks()[0];
+        
+        console.log('Checking stream readiness...');
+        console.log('Video track state:', videoTrack.readyState);
+        console.log('Audio track state:', audioTrack?.readyState);
+
+        if (videoTrack.readyState === 'live' && (!audioTrack || audioTrack.readyState === 'live')) {
+          console.log('Stream is ready');
           resolve(true);
         } else {
-          videoTrack.onended = () => resolve(false);
-          videoTrack.onmute = () => resolve(false);
-          videoTrack.onunmute = () => resolve(true);
+          const timeout = setTimeout(() => {
+            reject(new Error('Stream initialization timeout'));
+          }, 5000);
+
+          videoTrack.onended = () => {
+            clearTimeout(timeout);
+            reject(new Error('Video track ended'));
+          };
+
+          const checkTracks = () => {
+            if (videoTrack.readyState === 'live' && (!audioTrack || audioTrack.readyState === 'live')) {
+              clearTimeout(timeout);
+              resolve(true);
+            }
+          };
+
+          videoTrack.onunmute = checkTracks;
+          if (audioTrack) {
+            audioTrack.onunmute = checkTracks;
+          }
         }
       });
+
+      // Ensure stable stream with longer delay
+      console.log('Waiting for stream stabilization...');
+      await new Promise(resolve => setTimeout(resolve, 500));
 
       const options = {
         mimeType: 'video/webm;codecs=h264,opus',
@@ -82,6 +110,7 @@ export const useRecording = () => {
         options.mimeType = 'video/webm';
       }
       
+      console.log('Creating MediaRecorder with options:', options);
       const mediaRecorder = new MediaRecorder(finalStream, options);
       mediaRecorderRef.current = mediaRecorder;
       chunksRef.current = [];
@@ -105,8 +134,7 @@ export const useRecording = () => {
         });
       };
 
-      // Small delay to ensure everything is ready
-      await new Promise(resolve => setTimeout(resolve, 100));
+      console.log('Starting recording...');
       mediaRecorder.start(1000);
       
       toast({

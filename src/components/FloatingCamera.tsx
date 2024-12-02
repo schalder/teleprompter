@@ -39,15 +39,15 @@ const FloatingCamera = ({ videoRef, isVisible, cameraResolution }: FloatingCamer
 
   return (
     <div 
-      className={`fixed bottom-4 right-4 z-50 ${containerClasses} rounded-2xl overflow-hidden shadow-lg`}
+      className={`fixed bottom-4 right-4 z-50 ${containerClasses} rounded-2xl overflow-hidden shadow-lg bg-gray-900/10`}
     >
-      <div className="absolute inset-0 bg-gray-900/10 backdrop-blur-sm" />
+      <div className="absolute inset-0 backdrop-blur-[2px]" />
       <video
         ref={videoRef}
         autoPlay
         playsInline
         muted
-        className="relative w-full h-full object-cover [transform:scaleX(-1)]"
+        className="absolute inset-0 w-full h-full object-cover [transform:scaleX(-1)]"
       />
     </div>
   );

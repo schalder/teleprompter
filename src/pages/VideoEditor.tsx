@@ -1,15 +1,14 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 import { KeyboardShortcuts } from '@/components/KeyboardShortcuts';
-import { TimelineClip, Layer } from '@/types/editor';
 import { useToast } from '@/hooks/use-toast';
 import { EditorHeader } from '@/components/editor/EditorHeader';
 import { VideoPreview } from '@/components/editor/VideoPreview';
 import { EditorSidebar } from '@/components/editor/EditorSidebar';
 import { TimelineSection } from '@/components/editor/TimelineSection';
 import { VideoSplitControls } from '@/components/editor/VideoSplitControls';
-import { LayerManager } from '@/components/editor/LayerManager';
+import { useVideoEditor } from '@/hooks/useVideoEditor';
 import { nanoid } from 'nanoid';
 
 const VideoEditor = () => {
@@ -17,21 +16,26 @@ const VideoEditor = () => {
   const navigate = useNavigate();
   const videoUrl = location.state?.videoUrl;
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
-  const [volume, setVolume] = useState(1);
-  const [isMuted, setIsMuted] = useState(false);
-  const [layers, setLayers] = useState<Layer[]>([
-    {
-      id: '1',
-      name: 'Main Video',
-      visible: true,
-      type: 'video',
-      clips: []
-    }
-  ]);
   const { toast } = useToast();
+  
+  const {
+    isPlaying,
+    setIsPlaying,
+    currentTime,
+    setCurrentTime,
+    duration,
+    setDuration,
+    volume,
+    setVolume,
+    isMuted,
+    setIsMuted,
+    layers,
+    setLayers,
+    handleToggleLayer,
+    handleAddLayer,
+    handleVolumeChange,
+    handleMuteToggle,
+  } = useVideoEditor(videoRef);
 
   useEffect(() => {
     if (!videoUrl) {
@@ -63,7 +67,7 @@ const VideoEditor = () => {
 
     video.addEventListener('loadedmetadata', handleLoadedMetadata);
     return () => video.removeEventListener('loadedmetadata', handleLoadedMetadata);
-  }, []);
+  }, [setDuration, setLayers]);
 
   const togglePlayPause = () => {
     if (videoRef.current) {
@@ -128,32 +132,6 @@ const VideoEditor = () => {
       title: "Clip Split",
       description: `Video split at ${splitTime.toFixed(2)} seconds`,
     });
-  };
-
-  const handleDeleteClip = (clipId: string) => {
-    setLayers(prevLayers => 
-      prevLayers.map(layer => ({
-        ...layer,
-        clips: layer.clips.filter(clip => clip.id !== clipId)
-      }))
-    );
-  };
-
-  const handleVolumeChange = (value: number[]) => {
-    if (videoRef.current && typeof value[0] === 'number') {
-      const newVolume = value[0];
-      videoRef.current.volume = newVolume;
-      setVolume(newVolume);
-      setIsMuted(newVolume === 0);
-    }
-  };
-
-  const handleMuteToggle = () => {
-    if (videoRef.current) {
-      const newMutedState = !isMuted;
-      videoRef.current.muted = newMutedState;
-      setIsMuted(newMutedState);
-    }
   };
 
   const handleEffectChange = (effect: string, value: number) => {
@@ -245,31 +223,19 @@ const VideoEditor = () => {
                 onSplit={handleSplitAtCurrentTime}
                 onTimeUpdate={handleTimeUpdate}
                 onEnded={() => setIsPlaying(false)}
+                onVolumeChange={setVolume}
+                onMuteToggle={() => setIsMuted(!isMuted)}
+              />
+
+              <EditorSidebar
+                layers={layers}
+                onToggleLayer={handleToggleLayer}
+                onEffectChange={handleEffectChange}
+                onExport={handleExport}
+                onAddLayer={handleAddLayer}
                 onVolumeChange={handleVolumeChange}
                 onMuteToggle={handleMuteToggle}
               />
-
-              <div className="space-y-4">
-                <EditorSidebar
-                  layers={layers}
-                  onToggleLayer={(id) => {
-                    const layer = layers.find(l => l.id === id);
-                    if (layer) {
-                      setLayers(prevLayers =>
-                        prevLayers.map(l =>
-                          l.id === id ? { ...l, visible: !l.visible } : l
-                        )
-                      );
-                    }
-                  }}
-                  onEffectChange={handleEffectChange}
-                  onExport={handleExport}
-                />
-                <LayerManager
-                  layers={layers}
-                  onLayersChange={setLayers}
-                />
-              </div>
             </div>
 
             <div className="mt-4">

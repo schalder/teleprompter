@@ -6,6 +6,8 @@ import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/componen
 import { VideoControls } from '@/components/VideoControls';
 import { Timeline } from '@/components/Timeline';
 import { ClipsList } from '@/components/ClipsList';
+import { VideoVolume } from '@/components/VideoVolume';
+import { VideoLayers } from '@/components/VideoLayers';
 import { TimelineClip } from '@/types/editor';
 import { useToast } from '@/hooks/use-toast';
 
@@ -18,6 +20,11 @@ const VideoEditor = () => {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [clips, setClips] = useState<TimelineClip[]>([]);
+  const [volume, setVolume] = useState(1);
+  const [isMuted, setIsMuted] = useState(false);
+  const [layers, setLayers] = useState([
+    { id: '1', name: 'Main Video', visible: true },
+  ]);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -120,6 +127,35 @@ const VideoEditor = () => {
     }
   };
 
+  const handleVolumeChange = (value: number[]) => {
+    if (videoRef.current && typeof value[0] === 'number') {
+      const newVolume = value[0];
+      videoRef.current.volume = newVolume;
+      setVolume(newVolume);
+      setIsMuted(newVolume === 0);
+    }
+  };
+
+  const handleMuteToggle = () => {
+    if (videoRef.current) {
+      const newMutedState = !isMuted;
+      videoRef.current.muted = newMutedState;
+      setIsMuted(newMutedState);
+    }
+  };
+
+  const handleToggleLayer = (id: string) => {
+    setLayers(prevLayers =>
+      prevLayers.map(layer =>
+        layer.id === id ? { ...layer, visible: !layer.visible } : layer
+      )
+    );
+    toast({
+      title: "Layer visibility toggled",
+      description: `Layer ${id} visibility updated`,
+    });
+  };
+
   const handleClipReorder = (startIndex: number, endIndex: number) => {
     setClips(prevClips => {
       const newClips = [...prevClips];
@@ -168,12 +204,20 @@ const VideoEditor = () => {
                   />
                 </div>
                 
-                <VideoControls
-                  isPlaying={isPlaying}
-                  onPlayPause={togglePlayPause}
-                  onReset={handleReset}
-                  onSplit={handleSplitAtCurrentTime}
-                />
+                <div className="flex gap-4">
+                  <VideoControls
+                    isPlaying={isPlaying}
+                    onPlayPause={togglePlayPause}
+                    onReset={handleReset}
+                    onSplit={handleSplitAtCurrentTime}
+                  />
+                  <VideoVolume
+                    volume={volume}
+                    onVolumeChange={handleVolumeChange}
+                    onMuteToggle={handleMuteToggle}
+                    isMuted={isMuted}
+                  />
+                </div>
               </div>
 
               <div className="bg-gray-800 p-4 rounded-lg">
@@ -189,6 +233,11 @@ const VideoEditor = () => {
                     clips={clips} 
                     onReorder={handleClipReorder}
                     onPreviewClip={handlePreviewClip}
+                  />
+
+                  <VideoLayers
+                    layers={layers}
+                    onToggleLayer={handleToggleLayer}
                   />
                 </div>
               </div>

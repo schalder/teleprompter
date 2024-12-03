@@ -19,56 +19,42 @@ export const useRecording = () => {
     try {
       let finalStream: MediaStream;
 
-      // Set video constraints based on device type
-      const videoConstraints = isMobile ? {
-        width: { ideal: 1080 },
-        height: { ideal: 1920 },
-        frameRate: { ideal: 30 }
-      } : {
-        width: { ideal: cameraResolution === "landscape" ? 1920 : 1080 },
-        height: { ideal: cameraResolution === "landscape" ? 1080 : 1920 },
-        frameRate: { ideal: 30 }
-      };
-
-      const audioConstraints = selectedAudioDeviceId ? {
-        deviceId: { exact: selectedAudioDeviceId },
-        echoCancellation: true,
-        noiseSuppression: true,
-        sampleRate: 48000,
-      } : true;
-
-      console.log('Starting recording with constraints:', {
-        video: videoConstraints,
-        audio: audioConstraints
-      });
-
       if (recordingType === "camera") {
-        finalStream = await navigator.mediaDevices.getUserMedia({
+        const constraints = {
           video: {
-            ...videoConstraints,
+            width: { ideal: 1080 },
+            height: { ideal: 1920 },
+            frameRate: { ideal: 30 },
             facingMode: "user"
           },
-          audio: audioConstraints
-        });
+          audio: selectedAudioDeviceId ? {
+            deviceId: { exact: selectedAudioDeviceId },
+            echoCancellation: true,
+            noiseSuppression: true,
+            sampleRate: 48000,
+          } : true
+        };
+
+        console.log('Starting recording with constraints:', constraints);
+        finalStream = await navigator.mediaDevices.getUserMedia(constraints);
+        
+        const videoTrack = finalStream.getVideoTracks()[0];
+        console.log('Recording video track settings:', videoTrack.getSettings());
       } else {
-        finalStream = await navigator.mediaDevices.getDisplayMedia({
-          video: true,
-          audio: audioConstraints
-        });
+        if (!existingStream) {
+          finalStream = await navigator.mediaDevices.getDisplayMedia({
+            video: true,
+            audio: true
+          });
+        } else {
+          finalStream = existingStream;
+        }
       }
 
-      // Verify stream tracks
       const videoTrack = finalStream.getVideoTracks()[0];
-      const audioTrack = finalStream.getAudioTracks()[0];
-
       if (!videoTrack) {
         throw new Error('No video track available');
       }
-
-      console.log('Stream tracks obtained:', {
-        video: videoTrack?.label,
-        audio: audioTrack?.label
-      });
 
       const options = {
         mimeType: 'video/webm;codecs=h264,opus',
@@ -84,8 +70,6 @@ export const useRecording = () => {
       const mediaRecorder = new MediaRecorder(finalStream, options);
       mediaRecorderRef.current = mediaRecorder;
       chunksRef.current = [];
-
-      const timeslice = isMobile ? 100 : 1000;
 
       mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
@@ -103,6 +87,7 @@ export const useRecording = () => {
         });
       };
 
+      const timeslice = isMobile ? 100 : 1000;
       console.log('Starting recording with timeslice:', timeslice);
       mediaRecorder.start(timeslice);
 

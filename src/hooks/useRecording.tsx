@@ -21,37 +21,28 @@ export const useRecording = () => {
 
       // Set video constraints based on device type
       const videoConstraints = isMobile ? {
-        width: { exact: 1080 },
-        height: { exact: 1920 },
+        width: { ideal: 1080 },
+        height: { ideal: 1920 },
         frameRate: { ideal: 30 }
       } : {
-        width: { exact: cameraResolution === "landscape" ? 1920 : 1080 },
-        height: { exact: cameraResolution === "landscape" ? 1080 : 1920 },
+        width: { ideal: cameraResolution === "landscape" ? 1920 : 1080 },
+        height: { ideal: cameraResolution === "landscape" ? 1080 : 1920 },
         frameRate: { ideal: 30 }
       };
 
-      const audioConstraints = {
-        deviceId: selectedAudioDeviceId ? { exact: selectedAudioDeviceId } : undefined,
+      const audioConstraints = selectedAudioDeviceId ? {
+        deviceId: { exact: selectedAudioDeviceId },
         echoCancellation: true,
         noiseSuppression: true,
         sampleRate: 48000,
-        channelCount: 2
-      };
+      } : true;
 
-      console.log('Starting recording with audio device:', selectedAudioDeviceId);
-
-      // Clean up any existing streams
-      const existingVideoElement = document.querySelector('video');
-      if (existingVideoElement?.srcObject instanceof MediaStream) {
-        console.log('Cleaning up existing stream');
-        existingVideoElement.srcObject.getTracks().forEach(track => {
-          track.stop();
-          console.log(`Stopped track: ${track.kind}`);
-        });
-      }
+      console.log('Starting recording with constraints:', {
+        video: videoConstraints,
+        audio: audioConstraints
+      });
 
       if (recordingType === "camera") {
-        console.log('Creating new camera stream with audio constraints:', audioConstraints);
         finalStream = await navigator.mediaDevices.getUserMedia({
           video: {
             ...videoConstraints,
@@ -61,26 +52,22 @@ export const useRecording = () => {
         });
       } else {
         finalStream = await navigator.mediaDevices.getDisplayMedia({
-          video: {
-            width: { ideal: 1920 },
-            height: { ideal: 1080 },
-            frameRate: { ideal: 30 }
-          },
+          video: true,
           audio: audioConstraints
         });
       }
 
-      // Enhanced stream readiness check
-      await new Promise((resolve, reject) => {
-        const videoTrack = finalStream.getVideoTracks()[0];
-        const audioTrack = finalStream.getAudioTracks()[0];
-        
-        if (!videoTrack || videoTrack.readyState !== 'live') {
-          reject(new Error('Video track not ready'));
-          return;
-        }
+      // Verify stream tracks
+      const videoTrack = finalStream.getVideoTracks()[0];
+      const audioTrack = finalStream.getAudioTracks()[0];
 
-        resolve(true);
+      if (!videoTrack) {
+        throw new Error('No video track available');
+      }
+
+      console.log('Stream tracks obtained:', {
+        video: videoTrack?.label,
+        audio: audioTrack?.label
       });
 
       const options = {
@@ -88,17 +75,16 @@ export const useRecording = () => {
         videoBitsPerSecond: 8000000,
         audioBitsPerSecond: 128000
       };
-      
+
       if (!MediaRecorder.isTypeSupported(options.mimeType)) {
         options.mimeType = 'video/webm';
       }
-      
+
       console.log('Creating MediaRecorder with options:', options);
       const mediaRecorder = new MediaRecorder(finalStream, options);
       mediaRecorderRef.current = mediaRecorder;
       chunksRef.current = [];
 
-      // Use smaller timeslice for mobile to prevent truncation
       const timeslice = isMobile ? 100 : 1000;
 
       mediaRecorder.ondataavailable = (event) => {
@@ -108,21 +94,18 @@ export const useRecording = () => {
       };
 
       mediaRecorder.onstop = () => {
-        const blob = new Blob(chunksRef.current, { 
-          type: 'video/webm' 
-        });
-        
+        const blob = new Blob(chunksRef.current, { type: 'video/webm' });
         navigate("/preview", { 
           state: { 
-            videoUrl: URL.createObjectURL(blob), 
+            videoUrl: URL.createObjectURL(blob),
             mimeType: 'video/webm'
           } 
         });
       };
 
-      console.log('Starting recording...');
+      console.log('Starting recording with timeslice:', timeslice);
       mediaRecorder.start(timeslice);
-      
+
       toast({
         title: "Recording started",
         description: "Click Stop when you're done recording.",
@@ -132,16 +115,16 @@ export const useRecording = () => {
     } catch (error) {
       console.error("Recording error:", error);
       toast({
-        title: "Error",
-        description: "Failed to start recording. Please ensure camera and microphone permissions are granted and try again.",
         variant: "destructive",
+        title: "Recording Error",
+        description: "Failed to start recording. Please ensure camera and microphone permissions are granted and try again.",
       });
       return false;
     }
   };
 
   const stopRecording = () => {
-    if (mediaRecorderRef.current) {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop();
       return true;
     }

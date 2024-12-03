@@ -27,14 +27,15 @@ const PreviewManager = ({
 
   useEffect(() => {
     const updatePreview = async () => {
-      if (!isPreviewActive || recordingType !== "camera" || !hasPermissions) return;
+      if (!isPreviewActive || recordingType !== "camera") return;
 
       try {
+        // Stop any existing tracks
         if (previewVideoRef.current?.srcObject instanceof MediaStream) {
           previewVideoRef.current.srcObject.getTracks().forEach(track => track.stop());
         }
 
-        console.log('Updating preview with devices:', {
+        console.log('Requesting media with devices:', {
           video: selectedVideoDevice,
           audio: selectedAudioDevice
         });
@@ -59,7 +60,7 @@ const PreviewManager = ({
             echoCancellation: true,
             noiseSuppression: true,
             sampleRate: 48000,
-          } : true,
+          } : false,
         });
 
         if (previewVideoRef.current) {
@@ -73,12 +74,16 @@ const PreviewManager = ({
             });
           });
           
-          console.log('Preview updated with new devices');
+          console.log('Preview updated successfully');
           
+          const videoTrack = stream.getVideoTracks()[0];
           const audioTrack = stream.getAudioTracks()[0];
+          
+          if (videoTrack) {
+            console.log('Video track settings:', videoTrack.getSettings());
+          }
           if (audioTrack) {
-            const settings = audioTrack.getSettings();
-            console.log('Preview audio track settings:', settings);
+            console.log('Audio track settings:', audioTrack.getSettings());
           }
         }
       } catch (error) {
@@ -86,13 +91,13 @@ const PreviewManager = ({
         toast({
           variant: "destructive",
           title: "Preview Error",
-          description: "Failed to update preview with selected devices.",
+          description: "Failed to update preview with selected devices. Please check permissions.",
         });
       }
     };
 
     updatePreview();
-  }, [selectedVideoDevice, selectedAudioDevice, isPreviewActive, recordingType, cameraResolution, hasPermissions, isMobile]);
+  }, [selectedVideoDevice, selectedAudioDevice, isPreviewActive, recordingType, cameraResolution, hasPermissions, isMobile, toast]);
 
   if (!isPreviewActive) return null;
 

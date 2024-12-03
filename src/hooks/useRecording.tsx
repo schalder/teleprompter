@@ -17,65 +17,38 @@ export const useRecording = () => {
     try {
       let finalStream: MediaStream;
 
-      const audioConstraints: MediaTrackConstraints = {
-        deviceId: selectedAudioDeviceId ? { exact: selectedAudioDeviceId } : undefined,
+      const audioConstraints = selectedAudioDeviceId ? {
+        deviceId: { exact: selectedAudioDeviceId },
         echoCancellation: true,
         noiseSuppression: true,
         sampleRate: 48000,
         channelCount: 2
-      };
+      } : true;
 
       console.log('Starting recording with audio device:', selectedAudioDeviceId);
       console.log('Audio constraints:', audioConstraints);
 
       if (recordingType === "camera") {
-        const videoConstraints: MediaTrackConstraints = {
-          frameRate: { exact: 30 },
-          facingMode: "user"
+        const constraints: MediaStreamConstraints = {
+          video: {
+            width: { exact: cameraResolution === "landscape" ? 1920 : 1080 },
+            height: { exact: cameraResolution === "landscape" ? 1080 : 1920 },
+            frameRate: { ideal: 30 },
+            facingMode: "user"
+          },
+          audio: audioConstraints
         };
 
-        // Force exact dimensions based on orientation
-        if (cameraResolution === "landscape") {
-          videoConstraints.width = { exact: 1920 };
-          videoConstraints.height = { exact: 1080 };
-          videoConstraints.aspectRatio = { exact: 16/9 };
-        } else {
-          videoConstraints.width = { exact: 1080 };
-          videoConstraints.height = { exact: 1920 };
-          videoConstraints.aspectRatio = { exact: 9/16 };
-        }
+        finalStream = await navigator.mediaDevices.getUserMedia(constraints);
 
-        console.log('Video constraints:', videoConstraints);
-
-        finalStream = await navigator.mediaDevices.getUserMedia({
-          video: videoConstraints,
-          audio: audioConstraints
-        });
-
-        // Verify the selected devices
-        const videoTrack = finalStream.getVideoTracks()[0];
+        // Verify the selected audio device
         const audioTrack = finalStream.getAudioTracks()[0];
-        
-        if (videoTrack) {
-          const settings = videoTrack.getSettings();
-          console.log('Recording video track settings:', settings);
-          
-          // Verify if orientation matches requested
-          if (cameraResolution === "portrait" && settings.width && settings.height) {
-            if (settings.width > settings.height) {
-              console.warn('Warning: Video track orientation mismatch');
-              toast({
-                title: "Orientation Warning",
-                description: "Camera orientation may not match selected mode",
-                variant: "destructive",
-              });
-            }
-          }
-        }
-        
         if (audioTrack) {
           const settings = audioTrack.getSettings();
           console.log('Recording audio track settings:', settings);
+          if (settings.deviceId !== selectedAudioDeviceId) {
+            console.warn('Warning: Active recording audio device differs from selected device');
+          }
         }
       } else {
         finalStream = await navigator.mediaDevices.getDisplayMedia({
@@ -86,14 +59,12 @@ export const useRecording = () => {
         });
       }
 
-      // Optimized MediaRecorder options for mobile
       const options = {
-        mimeType: 'video/webm;codecs=vp8,opus',
-        videoBitsPerSecond: 2500000,
+        mimeType: 'video/webm;codecs=h264,opus',
+        videoBitsPerSecond: 8000000,
         audioBitsPerSecond: 128000
       };
       
-      // Fallback if the preferred codec isn't supported
       if (!MediaRecorder.isTypeSupported(options.mimeType)) {
         options.mimeType = 'video/webm';
       }
@@ -104,33 +75,26 @@ export const useRecording = () => {
       chunksRef.current = [];
 
       mediaRecorder.ondataavailable = (event) => {
-        if (event.data && event.data.size > 0) {
-          console.log('Received chunk of size:', event.data.size);
+        if (event.data.size > 0) {
           chunksRef.current.push(event.data);
         }
       };
 
       mediaRecorder.onstop = () => {
-        console.log('Recording stopped, total chunks:', chunksRef.current.length);
-        
         const blob = new Blob(chunksRef.current, { 
-          type: 'video/webm'
+          type: mediaRecorder.mimeType || 'video/webm' 
         });
-        
-        console.log('Final blob size:', blob.size);
-        
-        finalStream.getTracks().forEach(track => track.stop());
         
         navigate("/preview", { 
           state: { 
-            videoUrl: URL.createObjectURL(blob),
-            mimeType: 'video/webm'
+            videoUrl: URL.createObjectURL(blob), 
+            mimeType: mediaRecorder.mimeType 
           } 
         });
       };
 
-      console.log('Starting recording with timeslice: 500ms');
-      mediaRecorder.start(500);
+      console.log('Starting recording...');
+      mediaRecorder.start(1000);
       
       toast({
         title: "Recording started",
@@ -150,8 +114,7 @@ export const useRecording = () => {
   };
 
   const stopRecording = () => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      console.log('Stopping recording...');
+    if (mediaRecorderRef.current) {
       mediaRecorderRef.current.stop();
       return true;
     }

@@ -7,6 +7,7 @@ export const useRecording = () => {
   const chunksRef = useRef<Blob[]>([]);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
   const startRecording = async (
     recordingType: "camera" | "screen",
@@ -17,8 +18,13 @@ export const useRecording = () => {
     try {
       let finalStream: MediaStream;
 
-      // Set exact resolutions based on orientation
-      const videoConstraints = {
+      // Force portrait video constraints for mobile
+      const videoConstraints = isMobile ? {
+        width: { exact: 1080 },
+        height: { exact: 1920 },
+        frameRate: { ideal: 30 },
+        facingMode: "environment"
+      } : {
         width: { exact: cameraResolution === "landscape" ? 1920 : 1080 },
         height: { exact: cameraResolution === "landscape" ? 1080 : 1920 },
         frameRate: { ideal: 30 }
@@ -29,154 +35,77 @@ export const useRecording = () => {
         echoCancellation: true,
         noiseSuppression: true,
         sampleRate: 48000,
-        channelCount: 2
       };
 
-      console.log('Starting recording with audio device:', selectedAudioDeviceId);
+      console.log('Starting recording with constraints:', {
+        video: videoConstraints,
+        audio: audioConstraints,
+        isMobile,
+        resolution: isMobile ? "portrait" : cameraResolution
+      });
 
-      // Clean up any existing streams
-      const existingVideoElement = document.querySelector('video');
-      if (existingVideoElement?.srcObject instanceof MediaStream) {
-        console.log('Cleaning up existing stream');
-        existingVideoElement.srcObject.getTracks().forEach(track => {
+      // Clean up existing streams
+      if (existingStream) {
+        existingStream.getTracks().forEach(track => {
           track.stop();
-          console.log(`Stopped track: ${track.kind}`);
+          console.log(`Stopped existing track: ${track.kind}`);
         });
       }
 
       if (recordingType === "camera") {
-        console.log('Creating new camera stream with audio constraints:', audioConstraints);
+        console.log('Requesting camera stream with audio');
         finalStream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            ...videoConstraints,
-            facingMode: "user"
-          },
+          video: videoConstraints,
+          audio: audioConstraints
+        });
+      } else {
+        console.log('Requesting screen capture');
+        const displayStream = await navigator.mediaDevices.getDisplayMedia({
+          video: videoConstraints,
           audio: audioConstraints
         });
 
-        // Verify the selected audio device
-        const audioTrack = finalStream.getAudioTracks()[0];
-        if (audioTrack) {
-          const settings = audioTrack.getSettings();
-          console.log('Active audio track settings:', settings);
-          if (settings.deviceId !== selectedAudioDeviceId) {
-            console.warn('Warning: Active audio device differs from selected device');
-          }
+        // For screen recording, we need to handle audio separately
+        if (selectedAudioDeviceId) {
+          const audioStream = await navigator.mediaDevices.getUserMedia({
+            audio: audioConstraints
+          });
+          finalStream = new MediaStream([
+            ...displayStream.getVideoTracks(),
+            ...audioStream.getAudioTracks()
+          ]);
+        } else {
+          finalStream = displayStream;
         }
-      } else {
-        finalStream = await navigator.mediaDevices.getDisplayMedia({
-          video: {
-            width: { ideal: 1920 },
-            height: { ideal: 1080 },
-            frameRate: { ideal: 30 }
-          },
-          audio: audioConstraints
-        });
       }
 
-      // Enhanced stream readiness check with comprehensive validation
-      await new Promise((resolve, reject) => {
-        const videoTrack = finalStream.getVideoTracks()[0];
-        const audioTrack = finalStream.getAudioTracks()[0];
-        
-        console.log('Starting stream validation...');
-        console.log('Video track state:', videoTrack.readyState);
-        console.log('Audio track state:', audioTrack?.readyState);
-        console.log('Video track settings:', videoTrack.getSettings());
-        if (audioTrack) {
-          console.log('Audio track settings:', audioTrack.getSettings());
-        }
-
-        // Function to check if stream is fully ready
-        const isStreamReady = () => {
-          if (!videoTrack || videoTrack.readyState !== 'live') return false;
-          if (audioTrack && audioTrack.readyState !== 'live') return false;
-
-          const settings = videoTrack.getSettings();
-          return settings.width && settings.height && // Has dimensions
-                 settings.frameRate && // Has framerate
-                 videoTrack.enabled && // Is enabled
-                 finalStream.active; // Stream is active
-        };
-
-        // Initial check
-        if (isStreamReady()) {
-          console.log('Stream is ready immediately');
-          resolve(true);
-          return;
-        }
-
-        let frameCount = 0;
-        const imageCapture = new ImageCapture(videoTrack);
-        
-        // Set up frame checking
-        const checkFrame = async () => {
-          try {
-            const frame = await imageCapture.grabFrame();
-            frameCount++;
-            console.log(`Frame ${frameCount} captured: ${frame.width}x${frame.height}`);
-            frame.close();
-            return true;
-          } catch (error) {
-            console.log('Frame capture failed:', error);
-            return false;
-          }
-        };
-
-        // Set up a longer timeout for stream initialization
-        const timeout = setTimeout(() => {
-          reject(new Error('Stream initialization timeout'));
-        }, 10000); // 10 seconds timeout
-
-        // Set up periodic checks
-        const checkInterval = setInterval(async () => {
-          if (await checkFrame() && isStreamReady()) {
-            clearInterval(checkInterval);
-            clearTimeout(timeout);
-            console.log('Stream became ready during interval check');
-            resolve(true);
-          }
-        }, 100); // Check every 100ms
-
-        // Clean up on track ended
-        videoTrack.onended = () => {
-          clearInterval(checkInterval);
-          clearTimeout(timeout);
-          reject(new Error('Video track ended'));
-        };
-
-        // Additional track event listeners
-        videoTrack.onunmute = async () => {
-          if (await checkFrame() && isStreamReady()) {
-            clearInterval(checkInterval);
-            clearTimeout(timeout);
-            console.log('Stream became ready on unmute');
-            resolve(true);
-          }
-        };
-      });
-
-      // Additional stabilization delay with active checking
-      console.log('Starting final stream stabilization...');
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      // Final verification
+      // Log stream details
       const videoTrack = finalStream.getVideoTracks()[0];
       const audioTrack = finalStream.getAudioTracks()[0];
       
-      if (!finalStream.active || !videoTrack || videoTrack.readyState !== 'live') {
-        throw new Error('Stream failed final validation check');
+      if (videoTrack) {
+        const settings = videoTrack.getSettings();
+        console.log('Recording video track settings:', settings);
+        
+        // Force video track constraints for mobile
+        if (isMobile) {
+          await videoTrack.applyConstraints({
+            width: { exact: 1080 },
+            height: { exact: 1920 },
+            frameRate: { ideal: 30 }
+          });
+          console.log('Applied mobile constraints to video track');
+        }
       }
-
+      
       if (audioTrack) {
-        console.log('Final audio track settings:', audioTrack.getSettings());
+        console.log('Recording audio track settings:', audioTrack.getSettings());
       }
 
-      console.log('Stream passed all validation checks');
-
+      // Set up MediaRecorder with appropriate options
       const options = {
         mimeType: 'video/webm;codecs=h264,opus',
-        videoBitsPerSecond: 8000000,
+        videoBitsPerSecond: isMobile ? 2500000 : 8000000, // Lower bitrate for mobile
         audioBitsPerSecond: 128000
       };
       
@@ -221,7 +150,9 @@ export const useRecording = () => {
       console.error("Recording error:", error);
       toast({
         title: "Error",
-        description: "Failed to start recording. Please ensure camera and microphone permissions are granted and try again.",
+        description: isMobile 
+          ? "Please ensure camera and microphone access is enabled in your mobile browser settings."
+          : "Failed to start recording. Please check your permissions and try again.",
         variant: "destructive",
       });
       return false;

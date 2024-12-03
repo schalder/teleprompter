@@ -11,20 +11,31 @@ export const useDeviceManagement = (
   const [selectedVideoDevice, setSelectedVideoDevice] = useState<string>("");
   const { toast } = useToast();
   const { hasPermissions, checkPermissions } = useDevicePermissions();
+  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
   const updateDevices = async () => {
     try {
+      console.log('Checking permissions status:', hasPermissions);
       if (!hasPermissions) {
         const granted = await checkPermissions();
-        if (!granted) return;
+        console.log('Permission check result:', granted);
+        if (!granted) {
+          toast({
+            variant: "destructive",
+            title: "Permission Required",
+            description: "Please grant camera and microphone access to continue.",
+          });
+          return;
+        }
       }
 
       const devices = await navigator.mediaDevices.enumerateDevices();
+      console.log('All available devices:', devices);
       
       const videoInputs = devices.filter(device => device.kind === 'videoinput' && device.deviceId);
       const audioInputs = devices.filter(device => device.kind === 'audioinput' && device.deviceId);
       
-      console.log('Available devices:', {
+      console.log('Filtered devices:', {
         video: videoInputs.map(d => ({ id: d.deviceId, label: d.label })),
         audio: audioInputs.map(d => ({ id: d.deviceId, label: d.label }))
       });
@@ -32,13 +43,24 @@ export const useDeviceManagement = (
       setVideoDevices(videoInputs);
       setAudioDevices(audioInputs);
       
-      if (!selectedVideoDevice && videoInputs.length > 0) {
+      // Handle mobile device selection
+      if (isMobile && videoInputs.length > 0) {
+        const backCamera = videoInputs.find(device => 
+          device.label.toLowerCase().includes('back') || 
+          device.label.toLowerCase().includes('rear')
+        );
+        if (!selectedVideoDevice || !videoInputs.find(d => d.deviceId === selectedVideoDevice)) {
+          const defaultDevice = backCamera || videoInputs[0];
+          console.log('Setting default mobile video device:', defaultDevice.label);
+          setSelectedVideoDevice(defaultDevice.deviceId);
+        }
+      } else if (!selectedVideoDevice && videoInputs.length > 0) {
         const defaultDevice = videoInputs[0];
         console.log('Setting default video device:', defaultDevice.label);
         setSelectedVideoDevice(defaultDevice.deviceId);
       }
 
-      if (!selectedAudioDevice && audioInputs.length > 0) {
+      if ((!selectedAudioDevice || !audioInputs.find(d => d.deviceId === selectedAudioDevice)) && audioInputs.length > 0) {
         const defaultAudioDevice = audioInputs[0];
         console.log('Setting default audio device:', defaultAudioDevice.label);
         setSelectedAudioDevice(defaultAudioDevice.deviceId);
@@ -48,10 +70,28 @@ export const useDeviceManagement = (
       toast({
         variant: "destructive",
         title: "Device Error",
-        description: "Failed to access media devices. Please check permissions.",
+        description: isMobile 
+          ? "Please grant camera and microphone permissions in your mobile browser settings."
+          : "Failed to access media devices. Please check permissions.",
       });
     }
   };
+
+  // Add device change listener with immediate update
+  useEffect(() => {
+    const handleDeviceChange = async () => {
+      console.log('Device change detected');
+      await updateDevices();
+    };
+
+    // Initial device enumeration
+    updateDevices();
+
+    navigator.mediaDevices.addEventListener('devicechange', handleDeviceChange);
+    return () => {
+      navigator.mediaDevices.removeEventListener('devicechange', handleDeviceChange);
+    };
+  }, []);
 
   return {
     videoDevices,
@@ -59,6 +99,7 @@ export const useDeviceManagement = (
     selectedVideoDevice,
     setSelectedVideoDevice,
     updateDevices,
-    hasPermissions
+    hasPermissions,
+    isMobile
   };
 };

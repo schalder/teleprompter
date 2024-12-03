@@ -19,42 +19,31 @@ const DeviceSelector = ({
   placeholder,
 }: DeviceSelectorProps) => {
   const { toast } = useToast();
-  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
   useEffect(() => {
-    const checkPermissions = async () => {
-      if (devices.length === 0 && navigator.permissions) {
-        try {
-          const permissionName = label.toLowerCase().includes('camera') ? 'camera' : 'microphone';
-          const result = await navigator.permissions.query({ name: permissionName as PermissionName });
-          
-          console.log(`${label} permission status:`, result.state);
-          
-          if (result.state !== 'granted') {
+    // Only show the toast if we have no devices and at least one permission check has occurred
+    if (devices.length === 0 && navigator.permissions) {
+      navigator.permissions.query({ name: 'microphone' as PermissionName })
+        .then(permissionStatus => {
+          if (permissionStatus.state !== 'granted') {
             toast({
               variant: "destructive",
               title: `No ${label.toLowerCase()} detected`,
-              description: isMobile
-                ? `Please grant ${label.toLowerCase()} access in your browser settings.`
-                : `Please connect a ${label.toLowerCase()} and grant permissions.`,
+              description: `Please connect a ${label.toLowerCase()} and grant permissions.`,
             });
           }
-        } catch (error) {
-          console.log(`Unable to query ${label.toLowerCase()} permissions:`, error);
-        }
-      }
-    };
-
-    checkPermissions();
-  }, [devices, label, toast, isMobile]);
+        })
+        .catch(() => {
+          // If we can't query permissions, don't show the toast
+          console.log(`Unable to query ${label.toLowerCase()} permissions`);
+        });
+    }
+  }, [devices, label, toast]);
 
   return (
     <div className="space-y-2">
       <Label className="text-lg font-medium">{label}</Label>
-      <Select 
-        value={selectedDevice} 
-        onValueChange={onDeviceChange}
-      >
+      <Select value={selectedDevice} onValueChange={onDeviceChange}>
         <SelectTrigger className="w-full bg-gray-800 border-gray-700 text-white">
           <SelectValue placeholder={placeholder} className="text-gray-300" />
         </SelectTrigger>

@@ -1,13 +1,14 @@
 import { useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export const useRecording = () => {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const navigate = useNavigate();
   const { toast } = useToast();
-  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  const isMobile = useIsMobile();
 
   const startRecording = async (
     recordingType: "camera" | "screen",
@@ -18,12 +19,11 @@ export const useRecording = () => {
     try {
       let finalStream: MediaStream;
 
-      // Force portrait video constraints for mobile
+      // Set video constraints based on device type
       const videoConstraints = isMobile ? {
         width: { exact: 1080 },
         height: { exact: 1920 },
-        frameRate: { ideal: 30 },
-        facingMode: "environment"
+        frameRate: { ideal: 30 }
       } : {
         width: { exact: cameraResolution === "landscape" ? 1920 : 1080 },
         height: { exact: cameraResolution === "landscape" ? 1080 : 1920 },
@@ -35,77 +35,57 @@ export const useRecording = () => {
         echoCancellation: true,
         noiseSuppression: true,
         sampleRate: 48000,
+        channelCount: 2
       };
 
-      console.log('Starting recording with constraints:', {
-        video: videoConstraints,
-        audio: audioConstraints,
-        isMobile,
-        resolution: isMobile ? "portrait" : cameraResolution
-      });
+      console.log('Starting recording with audio device:', selectedAudioDeviceId);
 
-      // Clean up existing streams
-      if (existingStream) {
-        existingStream.getTracks().forEach(track => {
+      // Clean up any existing streams
+      const existingVideoElement = document.querySelector('video');
+      if (existingVideoElement?.srcObject instanceof MediaStream) {
+        console.log('Cleaning up existing stream');
+        existingVideoElement.srcObject.getTracks().forEach(track => {
           track.stop();
-          console.log(`Stopped existing track: ${track.kind}`);
+          console.log(`Stopped track: ${track.kind}`);
         });
       }
 
       if (recordingType === "camera") {
-        console.log('Requesting camera stream with audio');
+        console.log('Creating new camera stream with audio constraints:', audioConstraints);
         finalStream = await navigator.mediaDevices.getUserMedia({
-          video: videoConstraints,
+          video: {
+            ...videoConstraints,
+            facingMode: "user"
+          },
           audio: audioConstraints
         });
       } else {
-        console.log('Requesting screen capture');
-        const displayStream = await navigator.mediaDevices.getDisplayMedia({
-          video: videoConstraints,
+        finalStream = await navigator.mediaDevices.getDisplayMedia({
+          video: {
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+            frameRate: { ideal: 30 }
+          },
           audio: audioConstraints
         });
-
-        // For screen recording, we need to handle audio separately
-        if (selectedAudioDeviceId) {
-          const audioStream = await navigator.mediaDevices.getUserMedia({
-            audio: audioConstraints
-          });
-          finalStream = new MediaStream([
-            ...displayStream.getVideoTracks(),
-            ...audioStream.getAudioTracks()
-          ]);
-        } else {
-          finalStream = displayStream;
-        }
       }
 
-      // Log stream details
-      const videoTrack = finalStream.getVideoTracks()[0];
-      const audioTrack = finalStream.getAudioTracks()[0];
-      
-      if (videoTrack) {
-        const settings = videoTrack.getSettings();
-        console.log('Recording video track settings:', settings);
+      // Enhanced stream readiness check
+      await new Promise((resolve, reject) => {
+        const videoTrack = finalStream.getVideoTracks()[0];
+        const audioTrack = finalStream.getAudioTracks()[0];
         
-        // Force video track constraints for mobile
-        if (isMobile) {
-          await videoTrack.applyConstraints({
-            width: { exact: 1080 },
-            height: { exact: 1920 },
-            frameRate: { ideal: 30 }
-          });
-          console.log('Applied mobile constraints to video track');
+        if (!videoTrack || videoTrack.readyState !== 'live') {
+          reject(new Error('Video track not ready'));
+          return;
         }
-      }
-      
-      if (audioTrack) {
-        console.log('Recording audio track settings:', audioTrack.getSettings());
-      }
 
-      // Set up MediaRecorder with appropriate options
+        resolve(true);
+      });
+
       const options = {
         mimeType: 'video/webm;codecs=h264,opus',
-        videoBitsPerSecond: isMobile ? 2500000 : 8000000, // Lower bitrate for mobile
+        videoBitsPerSecond: 8000000,
         audioBitsPerSecond: 128000
       };
       
@@ -118,6 +98,9 @@ export const useRecording = () => {
       mediaRecorderRef.current = mediaRecorder;
       chunksRef.current = [];
 
+      // Use smaller timeslice for mobile to prevent truncation
+      const timeslice = isMobile ? 100 : 1000;
+
       mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
           chunksRef.current.push(event.data);
@@ -126,19 +109,19 @@ export const useRecording = () => {
 
       mediaRecorder.onstop = () => {
         const blob = new Blob(chunksRef.current, { 
-          type: mediaRecorder.mimeType || 'video/webm' 
+          type: 'video/webm' 
         });
         
         navigate("/preview", { 
           state: { 
             videoUrl: URL.createObjectURL(blob), 
-            mimeType: mediaRecorder.mimeType 
+            mimeType: 'video/webm'
           } 
         });
       };
 
       console.log('Starting recording...');
-      mediaRecorder.start(1000);
+      mediaRecorder.start(timeslice);
       
       toast({
         title: "Recording started",
@@ -150,9 +133,7 @@ export const useRecording = () => {
       console.error("Recording error:", error);
       toast({
         title: "Error",
-        description: isMobile 
-          ? "Please ensure camera and microphone access is enabled in your mobile browser settings."
-          : "Failed to start recording. Please check your permissions and try again.",
+        description: "Failed to start recording. Please ensure camera and microphone permissions are granted and try again.",
         variant: "destructive",
       });
       return false;

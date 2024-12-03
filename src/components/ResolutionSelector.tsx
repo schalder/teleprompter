@@ -14,16 +14,14 @@ const ResolutionSelector = ({
 }: ResolutionSelectorProps) => {
   const isMobile = useIsMobile();
 
-  // Force portrait mode on mobile
   useEffect(() => {
-    if (isMobile && cameraResolution !== "portrait") {
+    if (isMobile) {
       setCameraResolution("portrait");
     }
-  }, [isMobile, cameraResolution, setCameraResolution]);
+  }, [isMobile, setCameraResolution]);
 
-  // On mobile, don't show the selector at all
   if (isMobile) {
-    return null;
+    return null; // Hide resolution selector on mobile
   }
 
   return (

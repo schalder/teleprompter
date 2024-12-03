@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import VideoPreview from "./VideoPreview";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface PreviewManagerProps {
   isPreviewActive: boolean;
@@ -22,33 +23,27 @@ const PreviewManager = ({
   previewVideoRef
 }: PreviewManagerProps) => {
   const { toast } = useToast();
-  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     const updatePreview = async () => {
       if (!isPreviewActive || recordingType !== "camera" || !hasPermissions) return;
 
       try {
-        // Stop any existing streams
         if (previewVideoRef.current?.srcObject instanceof MediaStream) {
-          previewVideoRef.current.srcObject.getTracks().forEach(track => {
-            track.stop();
-            console.log(`Stopped track: ${track.kind}`);
-          });
+          previewVideoRef.current.srcObject.getTracks().forEach(track => track.stop());
         }
 
         console.log('Updating preview with devices:', {
           video: selectedVideoDevice,
-          audio: selectedAudioDevice,
-          isMobile,
-          resolution: isMobile ? "portrait" : cameraResolution
+          audio: selectedAudioDevice
         });
 
-        // Always use portrait constraints for mobile
+        // Force portrait mode constraints for mobile
         const videoConstraints = isMobile ? {
           deviceId: selectedVideoDevice ? { exact: selectedVideoDevice } : undefined,
-          width: { exact: 1080 },
-          height: { exact: 1920 },
+          width: { ideal: 1080 },
+          height: { ideal: 1920 },
           frameRate: { ideal: 30 },
         } : {
           deviceId: selectedVideoDevice ? { exact: selectedVideoDevice } : undefined,
@@ -67,24 +62,6 @@ const PreviewManager = ({
           } : true,
         });
 
-        // Log stream information
-        const videoTrack = stream.getVideoTracks()[0];
-        const audioTrack = stream.getAudioTracks()[0];
-        
-        console.log('Stream obtained successfully');
-        if (videoTrack) {
-          console.log('Video tracks:', stream.getVideoTracks().map(t => ({
-            label: t.label,
-            settings: t.getSettings()
-          })));
-        }
-        if (audioTrack) {
-          console.log('Audio tracks:', stream.getAudioTracks().map(t => ({
-            label: t.label,
-            settings: t.getSettings()
-          })));
-        }
-
         if (previewVideoRef.current) {
           previewVideoRef.current.srcObject = stream;
           await previewVideoRef.current.play().catch(e => {
@@ -98,6 +75,7 @@ const PreviewManager = ({
           
           console.log('Preview updated with new devices');
           
+          const audioTrack = stream.getAudioTracks()[0];
           if (audioTrack) {
             const settings = audioTrack.getSettings();
             console.log('Preview audio track settings:', settings);
@@ -108,15 +86,13 @@ const PreviewManager = ({
         toast({
           variant: "destructive",
           title: "Preview Error",
-          description: isMobile 
-            ? "Please check camera permissions in your mobile browser settings."
-            : "Failed to update preview with selected devices.",
+          description: "Failed to update preview with selected devices.",
         });
       }
     };
 
     updatePreview();
-  }, [selectedVideoDevice, selectedAudioDevice, isPreviewActive, recordingType, cameraResolution, hasPermissions]);
+  }, [selectedVideoDevice, selectedAudioDevice, isPreviewActive, recordingType, cameraResolution, hasPermissions, isMobile]);
 
   if (!isPreviewActive) return null;
 

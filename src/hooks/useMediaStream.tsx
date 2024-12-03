@@ -9,114 +9,39 @@ export const useMediaStream = () => {
   const screenCaptureStream = useRef<MediaStream | null>(null);
   const isMobile = useIsMobile();
 
-  const startPreview = async (
-    recordingType: "camera" | "screen",
-    cameraResolution: "landscape" | "portrait",
-    selectedVideoDeviceId?: string,
-    selectedAudioDeviceId?: string
-  ) => {
+  const startPreview = async (recordingType: "camera" | "screen", cameraResolution: "landscape" | "portrait") => {
     try {
-      if (previewStream) {
-        previewStream.getTracks().forEach((track) => track.stop());
-      }
-
-      let stream: MediaStream | null = null;
-
+      let stream: MediaStream;
       if (recordingType === "camera") {
-        // Force portrait mode on mobile
-        const effectiveResolution = isMobile ? "portrait" : cameraResolution;
-        
-        // Define base constraints
-        const videoConstraints: MediaTrackConstraints = {
-          deviceId: selectedVideoDeviceId ? { exact: selectedVideoDeviceId } : undefined,
-          frameRate: { exact: 30 }
-        };
-
-        // Set dimensions based on orientation
-        if (effectiveResolution === "landscape") {
-          videoConstraints.width = { exact: 1920 };
-          videoConstraints.height = { exact: 1080 };
-          videoConstraints.aspectRatio = { exact: 16/9 };
-        } else {
-          videoConstraints.width = { exact: 1080 };
-          videoConstraints.height = { exact: 1920 };
-          videoConstraints.aspectRatio = { exact: 9/16 };
-        }
-
-        console.log('Video constraints:', videoConstraints);
-
-        const audioConstraints: MediaTrackConstraints = {
-          deviceId: selectedAudioDeviceId ? { exact: selectedAudioDeviceId } : undefined,
-          echoCancellation: true,
-          noiseSuppression: true,
-          sampleRate: 48000
-        };
-
         stream = await navigator.mediaDevices.getUserMedia({
-          video: videoConstraints,
-          audio: audioConstraints
-        });
-        
-        // Verify device settings
-        const videoTrack = stream.getVideoTracks()[0];
-        if (videoTrack) {
-          const settings = videoTrack.getSettings();
-          console.log('Active video track settings:', settings);
-          
-          // Only show orientation warning on desktop
-          if (!isMobile && settings.width && settings.height) {
-            const isPortrait = settings.height > settings.width;
-            const shouldBePortrait = effectiveResolution === "portrait";
-            
-            if (isPortrait !== shouldBePortrait) {
-              console.warn('Video orientation mismatch');
-              toast({
-                title: "Orientation Warning",
-                description: "Camera orientation may not match selected mode",
-                variant: "destructive",
-              });
-            }
-          }
-        }
-      } else {
-        stream = await navigator.mediaDevices.getDisplayMedia({
           video: {
-            frameRate: { ideal: 30 }
+            facingMode: "user",
+            width: cameraResolution === "landscape" ? { ideal: 1920 } : { ideal: 1080 },
+            height: cameraResolution === "landscape" ? { ideal: 1080 } : { ideal: 1920 },
           },
-          audio: true
+          audio: true,
         });
-        screenCaptureStream.current = stream;
+      } else {
+        stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
       }
-
-      if (stream) {
-        setPreviewStream(stream);
-        if (previewVideoRef.current) {
-          previewVideoRef.current.srcObject = stream;
-          await previewVideoRef.current.play();
-          console.log('Preview started successfully');
-        }
+      setPreviewStream(stream);
+      if (previewVideoRef.current) {
+        previewVideoRef.current.srcObject = stream;
+        await previewVideoRef.current.play();
       }
     } catch (error) {
-      console.error("Preview error:", error);
       toast({
+        title: "Error starting preview",
+        description: "Could not start media stream.",
         variant: "destructive",
-        title: "Device Error",
-        description: error instanceof Error ? error.message : "Failed to access media devices",
       });
     }
   };
 
   const stopPreview = () => {
     if (previewStream) {
-      previewStream.getTracks().forEach((track) => track.stop());
+      previewStream.getTracks().forEach(track => track.stop());
       setPreviewStream(null);
-    }
-    if (previewVideoRef.current) {
-      previewVideoRef.current.srcObject = null;
-    }
-    if (screenCaptureStream.current) {
-      screenCaptureStream.current.getTracks().forEach((track) => track.stop());
-      screenCaptureStream.current = null;
     }
   };
 

@@ -68,6 +68,13 @@ const RecordingModal = ({
         console.log('Setting default video device:', defaultDevice.label);
         setSelectedVideoDevice(defaultDevice.deviceId);
       }
+
+      // Set default audio device if none is selected
+      if (!selectedAudioDevice && audioInputs.length > 0) {
+        const defaultAudioDevice = audioInputs[0];
+        console.log('Setting default audio device:', defaultAudioDevice.label);
+        setSelectedAudioDevice(defaultAudioDevice.deviceId);
+      }
     } catch (error) {
       console.error('Error accessing media devices:', error);
       toast({

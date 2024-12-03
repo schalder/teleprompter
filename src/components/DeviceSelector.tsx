@@ -21,12 +21,22 @@ const DeviceSelector = ({
   const { toast } = useToast();
 
   useEffect(() => {
-    if (devices.length === 0) {
-      toast({
-        variant: "destructive",
-        title: `No ${label.toLowerCase()} detected`,
-        description: `Please connect a ${label.toLowerCase()} and grant permissions.`,
-      });
+    // Only show the toast if we have no devices and at least one permission check has occurred
+    if (devices.length === 0 && navigator.permissions) {
+      navigator.permissions.query({ name: 'microphone' as PermissionName })
+        .then(permissionStatus => {
+          if (permissionStatus.state !== 'granted') {
+            toast({
+              variant: "destructive",
+              title: `No ${label.toLowerCase()} detected`,
+              description: `Please connect a ${label.toLowerCase()} and grant permissions.`,
+            });
+          }
+        })
+        .catch(() => {
+          // If we can't query permissions, don't show the toast
+          console.log(`Unable to query ${label.toLowerCase()} permissions`);
+        });
     }
   }, [devices, label, toast]);
 

@@ -1,11 +1,13 @@
 import { useState, useRef, useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
+import { useMobile } from "@/hooks/use-mobile";
 
 export const useMediaStream = () => {
   const [previewStream, setPreviewStream] = useState<MediaStream | null>(null);
   const { toast } = useToast();
   const previewVideoRef = useRef<HTMLVideoElement | null>(null);
   const screenCaptureStream = useRef<MediaStream | null>(null);
+  const isMobile = useMobile();
 
   const startPreview = async (
     recordingType: "camera" | "screen",
@@ -21,14 +23,17 @@ export const useMediaStream = () => {
       let stream: MediaStream | null = null;
 
       if (recordingType === "camera") {
-        // Define base constraints with exact values for mobile
+        // Force portrait mode on mobile
+        const effectiveResolution = isMobile ? "portrait" : cameraResolution;
+        
+        // Define base constraints
         const videoConstraints: MediaTrackConstraints = {
           deviceId: selectedVideoDeviceId ? { exact: selectedVideoDeviceId } : undefined,
           frameRate: { exact: 30 }
         };
 
-        // Force exact dimensions based on orientation
-        if (cameraResolution === "landscape") {
+        // Set dimensions based on orientation
+        if (effectiveResolution === "landscape") {
           videoConstraints.width = { exact: 1920 };
           videoConstraints.height = { exact: 1080 };
           videoConstraints.aspectRatio = { exact: 16/9 };
@@ -38,17 +43,14 @@ export const useMediaStream = () => {
           videoConstraints.aspectRatio = { exact: 9/16 };
         }
 
+        console.log('Video constraints:', videoConstraints);
+
         const audioConstraints: MediaTrackConstraints = {
           deviceId: selectedAudioDeviceId ? { exact: selectedAudioDeviceId } : undefined,
           echoCancellation: true,
           noiseSuppression: true,
           sampleRate: 48000
         };
-
-        console.log('Starting preview with constraints:', {
-          video: videoConstraints,
-          audio: audioConstraints
-        });
 
         stream = await navigator.mediaDevices.getUserMedia({
           video: videoConstraints,
@@ -57,16 +59,17 @@ export const useMediaStream = () => {
         
         // Verify device settings
         const videoTrack = stream.getVideoTracks()[0];
-        const audioTrack = stream.getAudioTracks()[0];
-        
         if (videoTrack) {
           const settings = videoTrack.getSettings();
           console.log('Active video track settings:', settings);
           
-          // Verify if orientation matches requested
-          if (cameraResolution === "portrait" && settings.width && settings.height) {
-            if (settings.width > settings.height) {
-              console.warn('Warning: Video track orientation mismatch');
+          // Only show orientation warning on desktop
+          if (!isMobile && settings.width && settings.height) {
+            const isPortrait = settings.height > settings.width;
+            const shouldBePortrait = effectiveResolution === "portrait";
+            
+            if (isPortrait !== shouldBePortrait) {
+              console.warn('Video orientation mismatch');
               toast({
                 title: "Orientation Warning",
                 description: "Camera orientation may not match selected mode",
@@ -75,33 +78,12 @@ export const useMediaStream = () => {
             }
           }
         }
-        
-        if (audioTrack) {
-          const settings = audioTrack.getSettings();
-          console.log('Active audio track settings:', settings);
-          
-          if (selectedAudioDeviceId && settings.deviceId !== selectedAudioDeviceId) {
-            console.warn('Warning: Active audio device differs from selected device');
-            toast({
-              title: "Audio Device Warning",
-              description: "Could not use the selected microphone. Using default device instead.",
-              variant: "destructive",
-            });
-          }
-        }
       } else {
-        const audioConstraints: MediaTrackConstraints = {
-          deviceId: selectedAudioDeviceId ? { exact: selectedAudioDeviceId } : undefined,
-          echoCancellation: true,
-          noiseSuppression: true,
-          sampleRate: 48000
-        };
-
         stream = await navigator.mediaDevices.getDisplayMedia({
           video: {
             frameRate: { ideal: 30 }
           },
-          audio: audioConstraints
+          audio: true
         });
         screenCaptureStream.current = stream;
       }

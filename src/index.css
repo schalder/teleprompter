@@ -75,6 +75,17 @@
   }
 }
 
+@media (max-width: 640px) {
+  .toaster-mobile {
+    position: fixed !important;
+    bottom: 1rem !important;
+    top: auto !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    z-index: 50 !important;
+  }
+}
+
 @keyframes scroll {
   from {
     transform: translateY(0);

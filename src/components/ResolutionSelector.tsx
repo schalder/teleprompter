@@ -1,6 +1,5 @@
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { useIsMobile } from "@/hooks/use-mobile";
 
 interface ResolutionSelectorProps {
   cameraResolution: "landscape" | "portrait";
@@ -11,8 +10,6 @@ const ResolutionSelector = ({
   cameraResolution,
   setCameraResolution,
 }: ResolutionSelectorProps) => {
-  const isMobile = useIsMobile();
-
   return (
     <div className="space-y-2">
       <Label className="text-lg font-medium">Camera Resolution</Label>

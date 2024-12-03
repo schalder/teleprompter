@@ -30,17 +30,19 @@ export const useRecording = () => {
 
       if (recordingType === "camera") {
         const videoConstraints: MediaTrackConstraints = {
-          frameRate: { ideal: 30 },
+          frameRate: { exact: 30 },
           facingMode: "user"
         };
 
-        // Set resolution based on orientation
+        // Force exact dimensions based on orientation
         if (cameraResolution === "landscape") {
           videoConstraints.width = { exact: 1920 };
           videoConstraints.height = { exact: 1080 };
+          videoConstraints.aspectRatio = { exact: 16/9 };
         } else {
           videoConstraints.width = { exact: 1080 };
           videoConstraints.height = { exact: 1920 };
+          videoConstraints.aspectRatio = { exact: 9/16 };
         }
 
         console.log('Video constraints:', videoConstraints);
@@ -57,19 +59,23 @@ export const useRecording = () => {
         if (videoTrack) {
           const settings = videoTrack.getSettings();
           console.log('Recording video track settings:', settings);
+          
+          // Verify if orientation matches requested
+          if (cameraResolution === "portrait" && settings.width && settings.height) {
+            if (settings.width > settings.height) {
+              console.warn('Warning: Video track orientation mismatch');
+              toast({
+                title: "Orientation Warning",
+                description: "Camera orientation may not match selected mode",
+                variant: "destructive",
+              });
+            }
+          }
         }
         
         if (audioTrack) {
           const settings = audioTrack.getSettings();
           console.log('Recording audio track settings:', settings);
-          if (selectedAudioDeviceId && settings.deviceId !== selectedAudioDeviceId) {
-            console.warn('Warning: Active recording audio device differs from selected device');
-            toast({
-              title: "Audio Device Warning",
-              description: "Could not use the selected microphone. Using default device instead.",
-              variant: "destructive",
-            });
-          }
         }
       } else {
         finalStream = await navigator.mediaDevices.getDisplayMedia({
@@ -82,7 +88,7 @@ export const useRecording = () => {
 
       // Optimized MediaRecorder options for mobile
       const options = {
-        mimeType: 'video/webm;codecs=vp8,opus', // Changed to VP8 for better mobile support
+        mimeType: 'video/webm;codecs=vp8,opus',
         videoBitsPerSecond: 2500000,
         audioBitsPerSecond: 128000
       };
@@ -108,7 +114,7 @@ export const useRecording = () => {
         console.log('Recording stopped, total chunks:', chunksRef.current.length);
         
         const blob = new Blob(chunksRef.current, { 
-          type: 'video/webm' // Force WebM format
+          type: 'video/webm'
         });
         
         console.log('Final blob size:', blob.size);

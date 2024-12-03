@@ -17,15 +17,13 @@ export const useRecording = () => {
     try {
       let finalStream: MediaStream;
 
-      const audioConstraints: MediaTrackConstraints = selectedAudioDeviceId 
-        ? {
-            deviceId: { exact: selectedAudioDeviceId },
-            echoCancellation: true,
-            noiseSuppression: true,
-            sampleRate: 48000,
-            channelCount: 2
-          } 
-        : true;
+      const audioConstraints: MediaTrackConstraints = {
+        deviceId: selectedAudioDeviceId ? { exact: selectedAudioDeviceId } : undefined,
+        echoCancellation: true,
+        noiseSuppression: true,
+        sampleRate: 48000,
+        channelCount: 2
+      };
 
       console.log('Starting recording with audio device:', selectedAudioDeviceId);
       console.log('Audio constraints:', audioConstraints);

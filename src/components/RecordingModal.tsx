@@ -1,13 +1,12 @@
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import DeviceSelector from "./DeviceSelector";
 import ResolutionSelector from "./ResolutionSelector";
-import { useToast } from "./ui/use-toast";
-import VideoPreview from "./VideoPreview";
 import RecordingTypeSelector from "./RecordingTypeSelector";
-import { useDevicePermissions } from "@/hooks/useDevicePermissions";
+import PreviewManager from "./PreviewManager";
+import { useDeviceManagement } from "@/hooks/useDeviceManagement";
 
 interface RecordingModalProps {
   isOpen: boolean;
@@ -36,54 +35,14 @@ const RecordingModal = ({
   selectedAudioDevice,
   setSelectedAudioDevice,
 }: RecordingModalProps) => {
-  const [videoDevices, setVideoDevices] = useState<MediaDeviceInfo[]>([]);
-  const [audioDevices, setAudioDevices] = useState<MediaDeviceInfo[]>([]);
-  const [selectedVideoDevice, setSelectedVideoDevice] = useState<string>("");
-  const { toast } = useToast();
-  const { hasPermissions, checkPermissions } = useDevicePermissions();
-
-  const updateDevices = async () => {
-    try {
-      if (!hasPermissions) {
-        const granted = await checkPermissions();
-        if (!granted) return;
-      }
-
-      const devices = await navigator.mediaDevices.enumerateDevices();
-      
-      const videoInputs = devices.filter(device => device.kind === 'videoinput' && device.deviceId);
-      const audioInputs = devices.filter(device => device.kind === 'audioinput' && device.deviceId);
-      
-      console.log('Available devices in modal:', {
-        video: videoInputs.map(d => ({ id: d.deviceId, label: d.label })),
-        audio: audioInputs.map(d => ({ id: d.deviceId, label: d.label }))
-      });
-
-      setVideoDevices(videoInputs);
-      setAudioDevices(audioInputs);
-      
-      // Set default devices only if none are selected and devices are available
-      if (!selectedVideoDevice && videoInputs.length > 0) {
-        const defaultDevice = videoInputs[0];
-        console.log('Setting default video device:', defaultDevice.label);
-        setSelectedVideoDevice(defaultDevice.deviceId);
-      }
-
-      // Set default audio device if none is selected
-      if (!selectedAudioDevice && audioInputs.length > 0) {
-        const defaultAudioDevice = audioInputs[0];
-        console.log('Setting default audio device:', defaultAudioDevice.label);
-        setSelectedAudioDevice(defaultAudioDevice.deviceId);
-      }
-    } catch (error) {
-      console.error('Error accessing media devices:', error);
-      toast({
-        variant: "destructive",
-        title: "Device Error",
-        description: "Failed to access media devices. Please check permissions.",
-      });
-    }
-  };
+  const {
+    videoDevices,
+    audioDevices,
+    selectedVideoDevice,
+    setSelectedVideoDevice,
+    updateDevices,
+    hasPermissions
+  } = useDeviceManagement(selectedAudioDevice, setSelectedAudioDevice);
 
   useEffect(() => {
     if (isOpen) {
@@ -94,71 +53,6 @@ const RecordingModal = ({
       };
     }
   }, [isOpen, hasPermissions]);
-
-  // Effect to handle device selection changes
-  useEffect(() => {
-    const updatePreview = async () => {
-      if (!isPreviewActive || recordingType !== "camera" || !hasPermissions) return;
-
-      try {
-        // Stop existing tracks
-        if (previewVideoRef.current?.srcObject instanceof MediaStream) {
-          previewVideoRef.current.srcObject.getTracks().forEach(track => track.stop());
-        }
-
-        console.log('Updating preview with devices:', {
-          video: selectedVideoDevice,
-          audio: selectedAudioDevice
-        });
-
-        // Get new stream with selected devices
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: selectedVideoDevice ? {
-            deviceId: { exact: selectedVideoDevice },
-            width: { ideal: cameraResolution === "landscape" ? 1920 : 1080 },
-            height: { ideal: cameraResolution === "landscape" ? 1080 : 1920 },
-            frameRate: { ideal: 30 },
-          } : true,
-          audio: selectedAudioDevice ? {
-            deviceId: { exact: selectedAudioDevice },
-            echoCancellation: true,
-            noiseSuppression: true,
-            sampleRate: 48000,
-          } : true,
-        });
-
-        if (previewVideoRef.current) {
-          previewVideoRef.current.srcObject = stream;
-          await previewVideoRef.current.play().catch(e => {
-            console.error('Error playing video:', e);
-            toast({
-              variant: "destructive",
-              title: "Preview Error",
-              description: "Failed to play video preview. Please check your camera permissions.",
-            });
-          });
-          
-          console.log('Preview updated with new devices');
-          
-          // Verify audio device
-          const audioTrack = stream.getAudioTracks()[0];
-          if (audioTrack) {
-            const settings = audioTrack.getSettings();
-            console.log('Preview audio track settings:', settings);
-          }
-        }
-      } catch (error) {
-        console.error('Error updating preview:', error);
-        toast({
-          variant: "destructive",
-          title: "Preview Error",
-          description: "Failed to update preview with selected devices.",
-        });
-      }
-    };
-
-    updatePreview();
-  }, [selectedVideoDevice, selectedAudioDevice, isPreviewActive, recordingType, cameraResolution, hasPermissions]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -200,12 +94,15 @@ const RecordingModal = ({
                 </>
               )}
 
-              {isPreviewActive && (
-                <VideoPreview
-                  previewVideoRef={previewVideoRef}
-                  cameraResolution={cameraResolution}
-                />
-              )}
+              <PreviewManager
+                isPreviewActive={isPreviewActive}
+                recordingType={recordingType}
+                hasPermissions={hasPermissions}
+                selectedVideoDevice={selectedVideoDevice}
+                selectedAudioDevice={selectedAudioDevice}
+                cameraResolution={cameraResolution}
+                previewVideoRef={previewVideoRef}
+              />
             </div>
           </ScrollArea>
         </div>

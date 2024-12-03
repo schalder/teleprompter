@@ -8,18 +8,46 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from '@/hooks/use-toast';
+import webmToMp4 from 'webm-to-mp4';
 
 interface ExportOptionsProps {
   onExport: (format: string, quality: string) => void;
+  videoUrl?: string;
 }
 
-export const ExportOptions = ({ onExport }: ExportOptionsProps) => {
-  const handleExport = (format: string) => {
-    onExport(format, 'high');
-    toast({
-      title: "Export Started",
-      description: `Exporting video as ${format.toUpperCase()}`,
-    });
+export const ExportOptions = ({ onExport, videoUrl }: ExportOptionsProps) => {
+  const handleExport = async (format: string) => {
+    try {
+      if (format === 'mp4' && videoUrl) {
+        // Convert WebM to MP4
+        const webmBlob = await fetch(videoUrl).then(r => r.blob());
+        const mp4Blob = await webmToMp4(webmBlob);
+        
+        // Create download link
+        const url = URL.createObjectURL(mp4Blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'recording.mp4';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      } else {
+        onExport(format, 'high');
+      }
+      
+      toast({
+        title: "Export Started",
+        description: `Exporting video as ${format.toUpperCase()}`,
+      });
+    } catch (error) {
+      console.error('Export error:', error);
+      toast({
+        title: "Export Failed",
+        description: "There was an error exporting your video. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (

@@ -1,13 +1,80 @@
 import { useState, useRef, useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
-import { useIsMobile } from "@/hooks/use-mobile";
 
 export const useMediaStream = () => {
   const [previewStream, setPreviewStream] = useState<MediaStream | null>(null);
   const { toast } = useToast();
   const previewVideoRef = useRef<HTMLVideoElement | null>(null);
+  const hasPermission = useRef<boolean>(false);
+  const permissionRequested = useRef<boolean>(false);
+  const deviceCheckAttempts = useRef<number>(0);
+  const MAX_DEVICE_CHECK_ATTEMPTS = 3;
   const screenCaptureStream = useRef<MediaStream | null>(null);
-  const isMobile = useIsMobile();
+
+  // Check if device is mobile
+  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+  const checkDeviceAvailability = async () => {
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videoDevices = devices.filter(device => device.kind === 'videoinput' && device.deviceId);
+      const audioDevices = devices.filter(device => device.kind === 'audioinput' && device.deviceId);
+
+      console.log('Available devices:', {
+        video: videoDevices.map(d => ({ id: d.deviceId, label: d.label })),
+        audio: audioDevices.map(d => ({ id: d.deviceId, label: d.label }))
+      });
+
+      return {
+        hasVideo: videoDevices.length > 0,
+        hasAudio: audioDevices.length > 0,
+        videoDevices,
+        audioDevices
+      };
+    } catch (error) {
+      console.error('Error checking devices:', error);
+      return { hasVideo: false, hasAudio: false, videoDevices: [], audioDevices: [] };
+    }
+  };
+
+  useEffect(() => {
+    const checkInitialPermissions = async () => {
+      try {
+        const { hasVideo, hasAudio, videoDevices } = await checkDeviceAvailability();
+        
+        if (!hasVideo || !hasAudio) {
+          console.log('Missing required devices');
+          return;
+        }
+
+        // Request permissions with the first available device explicitly
+        if (videoDevices.length > 0) {
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              deviceId: { exact: videoDevices[0].deviceId },
+              facingMode: 'user',
+              width: { ideal: isMobile ? 1080 : 1920 },
+              height: { ideal: isMobile ? 1920 : 1080 }
+            },
+            audio: {
+              echoCancellation: true,
+              noiseSuppression: true
+            }
+          });
+
+          console.log('Initial permission check successful with device:', videoDevices[0].label);
+          stream.getTracks().forEach(track => track.stop());
+          hasPermission.current = true;
+          deviceCheckAttempts.current = 0;
+        }
+      } catch (error) {
+        console.log('Initial permission check failed:', error);
+        hasPermission.current = false;
+      }
+    };
+
+    checkInitialPermissions();
+  }, [isMobile]);
 
   const startPreview = async (
     recordingType: "camera" | "screen",
@@ -23,69 +90,64 @@ export const useMediaStream = () => {
       let stream: MediaStream | null = null;
 
       if (recordingType === "camera") {
-        // Force portrait mode on mobile
         const effectiveResolution = isMobile ? "portrait" : cameraResolution;
-        
-        // Define base constraints
-        const videoConstraints: MediaTrackConstraints = {
-          deviceId: selectedVideoDeviceId ? { exact: selectedVideoDeviceId } : undefined,
-          frameRate: { exact: 30 }
-        };
 
-        // Set dimensions based on orientation
-        if (effectiveResolution === "landscape") {
-          videoConstraints.width = { exact: 1920 };
-          videoConstraints.height = { exact: 1080 };
-          videoConstraints.aspectRatio = { exact: 16/9 };
-        } else {
-          videoConstraints.width = { exact: 1080 };
-          videoConstraints.height = { exact: 1920 };
-          videoConstraints.aspectRatio = { exact: 9/16 };
-        }
-
-        console.log('Video constraints:', videoConstraints);
-
-        const audioConstraints: MediaTrackConstraints = {
-          deviceId: selectedAudioDeviceId ? { exact: selectedAudioDeviceId } : undefined,
-          echoCancellation: true,
-          noiseSuppression: true,
-          sampleRate: 48000
-        };
-
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: videoConstraints,
-          audio: audioConstraints
-        });
-        
-        // Verify device settings
-        const videoTrack = stream.getVideoTracks()[0];
-        if (videoTrack) {
-          const settings = videoTrack.getSettings();
-          console.log('Active video track settings:', settings);
-          
-          // Only show orientation warning on desktop
-          if (!isMobile && settings.width && settings.height) {
-            const isPortrait = settings.height > settings.width;
-            const shouldBePortrait = effectiveResolution === "portrait";
-            
-            if (isPortrait !== shouldBePortrait) {
-              console.warn('Video orientation mismatch');
-              toast({
-                title: "Orientation Warning",
-                description: "Camera orientation may not match selected mode",
-                variant: "destructive",
-              });
+        // Retry device check if needed
+        const checkDevices = async () => {
+          const { hasVideo, hasAudio, videoDevices } = await checkDeviceAvailability();
+          if (!hasVideo || !hasAudio) {
+            if (deviceCheckAttempts.current < MAX_DEVICE_CHECK_ATTEMPTS) {
+              deviceCheckAttempts.current++;
+              console.log(`Retrying device check, attempt ${deviceCheckAttempts.current}`);
+              await new Promise(resolve => setTimeout(resolve, 1000));
+              return checkDevices();
             }
+            throw new Error(!hasVideo ? "No camera found" : "No microphone found");
           }
-        }
-      } else {
-        stream = await navigator.mediaDevices.getDisplayMedia({
+
+          // If no device is selected, use the first available device
+          const effectiveVideoDeviceId = selectedVideoDeviceId || 
+            (videoDevices.length > 0 ? videoDevices[0].deviceId : undefined);
+
+          return effectiveVideoDeviceId;
+        };
+
+        const videoDeviceId = await checkDevices();
+
+        const constraints = {
           video: {
-            frameRate: { ideal: 30 }
+            deviceId: videoDeviceId ? { exact: videoDeviceId } : undefined,
+            width: { ideal: effectiveResolution === "landscape" ? 1920 : 1080 },
+            height: { ideal: effectiveResolution === "landscape" ? 1080 : 1920 },
+            frameRate: { ideal: 30 },
+            facingMode: "user",
           },
-          audio: true
-        });
-        screenCaptureStream.current = stream;
+          audio: {
+            deviceId: selectedAudioDeviceId ? { exact: selectedAudioDeviceId } : undefined,
+            echoCancellation: true,
+            noiseSuppression: true,
+            sampleRate: 48000,
+          },
+        };
+
+        console.log('Requesting media with constraints:', constraints);
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
+        console.log('Stream obtained successfully');
+        hasPermission.current = true;
+        deviceCheckAttempts.current = 0;
+      } else if (recordingType === "screen") {
+        // For screen recording, get a new stream if we don't have one
+        if (!screenCaptureStream.current) {
+          stream = await navigator.mediaDevices.getDisplayMedia({
+            video: {
+              frameRate: { ideal: 30 }
+            },
+            audio: true
+          });
+          screenCaptureStream.current = stream;
+        } else {
+          stream = screenCaptureStream.current;
+        }
       }
 
       if (stream) {
@@ -98,11 +160,29 @@ export const useMediaStream = () => {
       }
     } catch (error) {
       console.error("Preview error:", error);
-      toast({
-        variant: "destructive",
-        title: "Device Error",
-        description: error instanceof Error ? error.message : "Failed to access media devices",
-      });
+      
+      if (!permissionRequested.current) {
+        let errorMessage = "Please grant camera and microphone permissions when prompted.";
+        
+        if (error instanceof Error) {
+          if (error.name === "NotFoundError") {
+            errorMessage = "No camera found. Please ensure your device has a camera.";
+          } else if (error.name === "NotReadableError" || error.name === "AbortError") {
+            errorMessage = "Camera is in use by another app. Please close other camera apps.";
+          } else if (error.name === "NotAllowedError") {
+            errorMessage = "Camera access denied. Please check your browser settings and try again.";
+          }
+        }
+
+        toast({
+          variant: "destructive",
+          title: "Camera Access Required",
+          description: errorMessage,
+        });
+      }
+      
+      hasPermission.current = false;
+      permissionRequested.current = true;
     }
   };
 
@@ -118,6 +198,8 @@ export const useMediaStream = () => {
       screenCaptureStream.current.getTracks().forEach((track) => track.stop());
       screenCaptureStream.current = null;
     }
+    permissionRequested.current = false;
+    deviceCheckAttempts.current = 0;
   };
 
   return {

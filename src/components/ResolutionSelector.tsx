@@ -13,24 +13,6 @@ const ResolutionSelector = ({
 }: ResolutionSelectorProps) => {
   const isMobile = useIsMobile();
 
-  // Force portrait mode on mobile
-  if (isMobile && cameraResolution !== "portrait") {
-    setCameraResolution("portrait");
-  }
-
-  // On mobile, just show a label indicating portrait mode
-  if (isMobile) {
-    return (
-      <div className="space-y-2">
-        <Label className="text-lg font-medium">Camera Resolution</Label>
-        <div className="flex items-center space-x-4 p-4 rounded-lg border border-gray-700">
-          <Label className="cursor-default">1080x1920 (Portrait - Mobile)</Label>
-        </div>
-      </div>
-    );
-  }
-
-  // On desktop, show both options
   return (
     <div className="space-y-2">
       <Label className="text-lg font-medium">Camera Resolution</Label>

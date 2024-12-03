@@ -1,13 +1,13 @@
 import { useState, useRef, useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
-import { useMobile } from "@/hooks/use-mobile";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export const useMediaStream = () => {
   const [previewStream, setPreviewStream] = useState<MediaStream | null>(null);
   const { toast } = useToast();
   const previewVideoRef = useRef<HTMLVideoElement | null>(null);
   const screenCaptureStream = useRef<MediaStream | null>(null);
-  const isMobile = useMobile();
+  const isMobile = useIsMobile();
 
   const startPreview = async (
     recordingType: "camera" | "screen",

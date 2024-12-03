@@ -18,10 +18,10 @@ export const useRecording = () => {
     try {
       let finalStream: MediaStream;
 
-      // Set mobile-specific constraints
+      // Always use portrait constraints for mobile
       const videoConstraints = isMobile ? {
-        width: { ideal: 1080 },
-        height: { ideal: 1920 },
+        width: { exact: 1080 },
+        height: { exact: 1920 },
         frameRate: { ideal: 30 }
       } : {
         width: { exact: cameraResolution === "landscape" ? 1920 : 1080 },
@@ -39,7 +39,8 @@ export const useRecording = () => {
       console.log('Starting recording with constraints:', {
         video: videoConstraints,
         audio: audioConstraints,
-        isMobile
+        isMobile,
+        resolution: isMobile ? "portrait" : cameraResolution
       });
 
       // Clean up existing streams
@@ -67,33 +68,15 @@ export const useRecording = () => {
         });
       }
 
-      // Simplified stream validation for mobile
-      if (isMobile) {
-        console.log('Mobile device detected, using simplified stream validation');
-        const videoTrack = finalStream.getVideoTracks()[0];
-        const audioTrack = finalStream.getAudioTracks()[0];
-        
-        if (!videoTrack) {
-          throw new Error('No video track available');
-        }
-
-        console.log('Stream tracks:', {
-          video: videoTrack.getSettings(),
-          audio: audioTrack?.getSettings()
-        });
-      } else {
-        // Desktop validation
-        await new Promise((resolve, reject) => {
-          const videoTrack = finalStream.getVideoTracks()[0];
-          const audioTrack = finalStream.getAudioTracks()[0];
-          
-          if (!videoTrack || videoTrack.readyState !== 'live') {
-            reject(new Error('Video track not ready'));
-            return;
-          }
-
-          resolve(true);
-        });
+      // Log stream details
+      const videoTrack = finalStream.getVideoTracks()[0];
+      const audioTrack = finalStream.getAudioTracks()[0];
+      
+      if (videoTrack) {
+        console.log('Recording video track settings:', videoTrack.getSettings());
+      }
+      if (audioTrack) {
+        console.log('Recording audio track settings:', audioTrack.getSettings());
       }
 
       // Set up MediaRecorder with appropriate options

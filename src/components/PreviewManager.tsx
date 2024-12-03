@@ -39,14 +39,16 @@ const PreviewManager = ({
 
         console.log('Updating preview with devices:', {
           video: selectedVideoDevice,
-          audio: selectedAudioDevice
+          audio: selectedAudioDevice,
+          isMobile,
+          resolution: isMobile ? "portrait" : cameraResolution
         });
 
-        // Set constraints based on device type
+        // Always use portrait constraints for mobile
         const videoConstraints = isMobile ? {
           deviceId: selectedVideoDevice ? { exact: selectedVideoDevice } : undefined,
-          width: { ideal: 1080 },
-          height: { ideal: 1920 },
+          width: { exact: 1080 },
+          height: { exact: 1920 },
           frameRate: { ideal: 30 },
         } : {
           deviceId: selectedVideoDevice ? { exact: selectedVideoDevice } : undefined,

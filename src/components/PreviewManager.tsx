@@ -1,7 +1,6 @@
 import { useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import VideoPreview from "./VideoPreview";
-import { useIsMobile } from "@/hooks/use-mobile";
 
 interface PreviewManagerProps {
   isPreviewActive: boolean;
@@ -23,44 +22,34 @@ const PreviewManager = ({
   previewVideoRef
 }: PreviewManagerProps) => {
   const { toast } = useToast();
-  const isMobile = useIsMobile();
 
   useEffect(() => {
     const updatePreview = async () => {
-      if (!isPreviewActive || recordingType !== "camera") return;
+      if (!isPreviewActive || recordingType !== "camera" || !hasPermissions) return;
 
       try {
-        // Stop any existing tracks
         if (previewVideoRef.current?.srcObject instanceof MediaStream) {
           previewVideoRef.current.srcObject.getTracks().forEach(track => track.stop());
         }
 
-        console.log('Requesting media with devices:', {
+        console.log('Updating preview with devices:', {
           video: selectedVideoDevice,
           audio: selectedAudioDevice
         });
 
-        // Force portrait mode constraints for mobile
-        const videoConstraints = isMobile ? {
-          deviceId: selectedVideoDevice ? { exact: selectedVideoDevice } : undefined,
-          width: { ideal: 1080 },
-          height: { ideal: 1920 },
-          frameRate: { ideal: 30 },
-        } : {
-          deviceId: selectedVideoDevice ? { exact: selectedVideoDevice } : undefined,
-          width: { ideal: cameraResolution === "landscape" ? 1920 : 1080 },
-          height: { ideal: cameraResolution === "landscape" ? 1080 : 1920 },
-          frameRate: { ideal: 30 },
-        };
-
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: videoConstraints,
+          video: selectedVideoDevice ? {
+            deviceId: { exact: selectedVideoDevice },
+            width: { ideal: cameraResolution === "landscape" ? 1920 : 1080 },
+            height: { ideal: cameraResolution === "landscape" ? 1080 : 1920 },
+            frameRate: { ideal: 30 },
+          } : true,
           audio: selectedAudioDevice ? {
             deviceId: { exact: selectedAudioDevice },
             echoCancellation: true,
             noiseSuppression: true,
             sampleRate: 48000,
-          } : false,
+          } : true,
         });
 
         if (previewVideoRef.current) {
@@ -74,16 +63,12 @@ const PreviewManager = ({
             });
           });
           
-          console.log('Preview updated successfully');
+          console.log('Preview updated with new devices');
           
-          const videoTrack = stream.getVideoTracks()[0];
           const audioTrack = stream.getAudioTracks()[0];
-          
-          if (videoTrack) {
-            console.log('Video track settings:', videoTrack.getSettings());
-          }
           if (audioTrack) {
-            console.log('Audio track settings:', audioTrack.getSettings());
+            const settings = audioTrack.getSettings();
+            console.log('Preview audio track settings:', settings);
           }
         }
       } catch (error) {
@@ -91,20 +76,20 @@ const PreviewManager = ({
         toast({
           variant: "destructive",
           title: "Preview Error",
-          description: "Failed to update preview with selected devices. Please check permissions.",
+          description: "Failed to update preview with selected devices.",
         });
       }
     };
 
     updatePreview();
-  }, [selectedVideoDevice, selectedAudioDevice, isPreviewActive, recordingType, cameraResolution, hasPermissions, isMobile, toast]);
+  }, [selectedVideoDevice, selectedAudioDevice, isPreviewActive, recordingType, cameraResolution, hasPermissions]);
 
   if (!isPreviewActive) return null;
 
   return (
     <VideoPreview
       previewVideoRef={previewVideoRef}
-      cameraResolution={isMobile ? "portrait" : cameraResolution}
+      cameraResolution={cameraResolution}
     />
   );
 };

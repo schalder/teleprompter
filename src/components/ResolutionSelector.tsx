@@ -1,6 +1,7 @@
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useEffect } from "react";
 
 interface ResolutionSelectorProps {
   cameraResolution: "landscape" | "portrait";
@@ -12,6 +13,16 @@ const ResolutionSelector = ({
   setCameraResolution,
 }: ResolutionSelectorProps) => {
   const isMobile = useIsMobile();
+
+  useEffect(() => {
+    if (isMobile) {
+      setCameraResolution("portrait");
+    }
+  }, [isMobile, setCameraResolution]);
+
+  if (isMobile) {
+    return null; // Hide resolution selector on mobile
+  }
 
   return (
     <div className="space-y-2">

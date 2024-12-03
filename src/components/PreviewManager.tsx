@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import VideoPreview from "./VideoPreview";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface PreviewManagerProps {
   isPreviewActive: boolean;
@@ -22,6 +23,7 @@ const PreviewManager = ({
   previewVideoRef
 }: PreviewManagerProps) => {
   const { toast } = useToast();
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     const updatePreview = async () => {
@@ -37,13 +39,21 @@ const PreviewManager = ({
           audio: selectedAudioDevice
         });
 
+        // Force portrait mode constraints for mobile
+        const videoConstraints = isMobile ? {
+          deviceId: selectedVideoDevice ? { exact: selectedVideoDevice } : undefined,
+          width: { ideal: 1080 },
+          height: { ideal: 1920 },
+          frameRate: { ideal: 30 },
+        } : {
+          deviceId: selectedVideoDevice ? { exact: selectedVideoDevice } : undefined,
+          width: { ideal: cameraResolution === "landscape" ? 1920 : 1080 },
+          height: { ideal: cameraResolution === "landscape" ? 1080 : 1920 },
+          frameRate: { ideal: 30 },
+        };
+
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: selectedVideoDevice ? {
-            deviceId: { exact: selectedVideoDevice },
-            width: { ideal: cameraResolution === "landscape" ? 1920 : 1080 },
-            height: { ideal: cameraResolution === "landscape" ? 1080 : 1920 },
-            frameRate: { ideal: 30 },
-          } : true,
+          video: videoConstraints,
           audio: selectedAudioDevice ? {
             deviceId: { exact: selectedAudioDevice },
             echoCancellation: true,
@@ -82,14 +92,14 @@ const PreviewManager = ({
     };
 
     updatePreview();
-  }, [selectedVideoDevice, selectedAudioDevice, isPreviewActive, recordingType, cameraResolution, hasPermissions]);
+  }, [selectedVideoDevice, selectedAudioDevice, isPreviewActive, recordingType, cameraResolution, hasPermissions, isMobile]);
 
   if (!isPreviewActive) return null;
 
   return (
     <VideoPreview
       previewVideoRef={previewVideoRef}
-      cameraResolution={cameraResolution}
+      cameraResolution={isMobile ? "portrait" : cameraResolution}
     />
   );
 };

@@ -23,13 +23,13 @@ export const useRecording = () => {
         noiseSuppression: true,
         sampleRate: 48000,
         channelCount: 2
-      } : undefined;
+      } : true;
 
       console.log('Starting recording with audio device:', selectedAudioDeviceId);
       console.log('Audio constraints:', audioConstraints);
 
       if (recordingType === "camera") {
-        finalStream = await navigator.mediaDevices.getUserMedia({
+        const constraints: MediaStreamConstraints = {
           video: {
             width: { exact: cameraResolution === "landscape" ? 1920 : 1080 },
             height: { exact: cameraResolution === "landscape" ? 1080 : 1920 },
@@ -37,7 +37,9 @@ export const useRecording = () => {
             facingMode: "user"
           },
           audio: audioConstraints
-        });
+        };
+
+        finalStream = await navigator.mediaDevices.getUserMedia(constraints);
 
         // Verify the selected audio device
         const audioTrack = finalStream.getAudioTracks()[0];

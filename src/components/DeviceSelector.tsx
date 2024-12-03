@@ -2,6 +2,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
+import { AlertCircle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface DeviceSelectorProps {
   label: string;
@@ -30,10 +32,27 @@ const DeviceSelector = ({
     }
   }, [devices, label, toast]);
 
+  if (devices.length === 0) {
+    return (
+      <div className="space-y-2">
+        <Label className="text-lg font-medium">{label}</Label>
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            No {label.toLowerCase()} detected. Please connect a device and grant permissions.
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-2">
       <Label className="text-lg font-medium">{label}</Label>
-      <Select value={selectedDevice} onValueChange={onDeviceChange}>
+      <Select 
+        value={selectedDevice || devices[0]?.deviceId} 
+        onValueChange={onDeviceChange}
+      >
         <SelectTrigger className="w-full bg-gray-800 border-gray-700 text-white">
           <SelectValue placeholder={placeholder} className="text-gray-300" />
         </SelectTrigger>

@@ -18,11 +18,12 @@ export const useRecording = () => {
     try {
       let finalStream: MediaStream;
 
-      // Always use portrait constraints for mobile
+      // Force portrait video constraints for mobile
       const videoConstraints = isMobile ? {
         width: { exact: 1080 },
         height: { exact: 1920 },
-        frameRate: { ideal: 30 }
+        frameRate: { ideal: 30 },
+        facingMode: "environment"
       } : {
         width: { exact: cameraResolution === "landscape" ? 1920 : 1080 },
         height: { exact: cameraResolution === "landscape" ? 1080 : 1920 },
@@ -54,18 +55,28 @@ export const useRecording = () => {
       if (recordingType === "camera") {
         console.log('Requesting camera stream with audio');
         finalStream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            ...videoConstraints,
-            facingMode: "user"
-          },
+          video: videoConstraints,
           audio: audioConstraints
         });
       } else {
         console.log('Requesting screen capture');
-        finalStream = await navigator.mediaDevices.getDisplayMedia({
+        const displayStream = await navigator.mediaDevices.getDisplayMedia({
           video: videoConstraints,
           audio: audioConstraints
         });
+
+        // For screen recording, we need to handle audio separately
+        if (selectedAudioDeviceId) {
+          const audioStream = await navigator.mediaDevices.getUserMedia({
+            audio: audioConstraints
+          });
+          finalStream = new MediaStream([
+            ...displayStream.getVideoTracks(),
+            ...audioStream.getAudioTracks()
+          ]);
+        } else {
+          finalStream = displayStream;
+        }
       }
 
       // Log stream details
@@ -73,8 +84,20 @@ export const useRecording = () => {
       const audioTrack = finalStream.getAudioTracks()[0];
       
       if (videoTrack) {
-        console.log('Recording video track settings:', videoTrack.getSettings());
+        const settings = videoTrack.getSettings();
+        console.log('Recording video track settings:', settings);
+        
+        // Force video track constraints for mobile
+        if (isMobile) {
+          await videoTrack.applyConstraints({
+            width: { exact: 1080 },
+            height: { exact: 1920 },
+            frameRate: { ideal: 30 }
+          });
+          console.log('Applied mobile constraints to video track');
+        }
       }
+      
       if (audioTrack) {
         console.log('Recording audio track settings:', audioTrack.getSettings());
       }

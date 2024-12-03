@@ -26,23 +26,23 @@ export const ExportOptions = ({ onExport, videoUrl }: ExportOptionsProps) => {
         const mp4ArrayBuffer = await webmToMp4(uint8Array);
         const mp4Blob = new Blob([mp4ArrayBuffer], { type: 'video/mp4' });
         
-        // Create download link
+        // Create download link with explicit MP4 extension
         const url = URL.createObjectURL(mp4Blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'recording.mp4';
+        a.download = `recording.mp4`;  // Force .mp4 extension
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
+
+        toast({
+          title: "Export Complete",
+          description: "Your video has been exported as MP4",
+        });
       } else {
         onExport(format, 'high');
       }
-      
-      toast({
-        title: "Export Started",
-        description: `Exporting video as ${format.toUpperCase()}`,
-      });
     } catch (error) {
       console.error('Export error:', error);
       toast({

@@ -1,7 +1,6 @@
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useEffect } from "react";
 
 interface ResolutionSelectorProps {
   cameraResolution: "landscape" | "portrait";
@@ -13,18 +12,6 @@ const ResolutionSelector = ({
   setCameraResolution,
 }: ResolutionSelectorProps) => {
   const isMobile = useIsMobile();
-
-  // Force portrait mode on mobile
-  useEffect(() => {
-    if (isMobile && cameraResolution !== "portrait") {
-      setCameraResolution("portrait");
-    }
-  }, [isMobile, cameraResolution, setCameraResolution]);
-
-  // On mobile, don't show the selector at all
-  if (isMobile) {
-    return null;
-  }
 
   return (
     <div className="space-y-2">

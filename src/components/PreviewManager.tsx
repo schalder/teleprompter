@@ -1,7 +1,6 @@
 import { useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import VideoPreview from "./VideoPreview";
-import { useIsMobile } from "@/hooks/use-mobile";
 
 interface PreviewManagerProps {
   isPreviewActive: boolean;
@@ -23,7 +22,6 @@ const PreviewManager = ({
   previewVideoRef
 }: PreviewManagerProps) => {
   const { toast } = useToast();
-  const isMobile = useIsMobile();
 
   useEffect(() => {
     const updatePreview = async () => {
@@ -34,20 +32,18 @@ const PreviewManager = ({
           previewVideoRef.current.srcObject.getTracks().forEach(track => track.stop());
         }
 
-        // Always use portrait constraints on mobile
-        const effectiveResolution = isMobile ? "portrait" : cameraResolution;
-
-        const videoConstraints = {
-          deviceId: selectedVideoDevice ? { exact: selectedVideoDevice } : undefined,
-          width: { ideal: effectiveResolution === "portrait" ? 1080 : 1920 },
-          height: { ideal: effectiveResolution === "portrait" ? 1920 : 1080 },
-          frameRate: { ideal: 30 },
-        };
-
-        console.log('Updating preview with constraints:', videoConstraints);
+        console.log('Updating preview with devices:', {
+          video: selectedVideoDevice,
+          audio: selectedAudioDevice
+        });
 
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: videoConstraints,
+          video: selectedVideoDevice ? {
+            deviceId: { exact: selectedVideoDevice },
+            width: { ideal: cameraResolution === "landscape" ? 1920 : 1080 },
+            height: { ideal: cameraResolution === "landscape" ? 1080 : 1920 },
+            frameRate: { ideal: 30 },
+          } : true,
           audio: selectedAudioDevice ? {
             deviceId: { exact: selectedAudioDevice },
             echoCancellation: true,
@@ -66,6 +62,14 @@ const PreviewManager = ({
               description: "Failed to play video preview. Please check your camera permissions.",
             });
           });
+          
+          console.log('Preview updated with new devices');
+          
+          const audioTrack = stream.getAudioTracks()[0];
+          if (audioTrack) {
+            const settings = audioTrack.getSettings();
+            console.log('Preview audio track settings:', settings);
+          }
         }
       } catch (error) {
         console.error('Error updating preview:', error);
@@ -78,14 +82,14 @@ const PreviewManager = ({
     };
 
     updatePreview();
-  }, [selectedVideoDevice, selectedAudioDevice, isPreviewActive, recordingType, cameraResolution, hasPermissions, isMobile]);
+  }, [selectedVideoDevice, selectedAudioDevice, isPreviewActive, recordingType, cameraResolution, hasPermissions]);
 
   if (!isPreviewActive) return null;
 
   return (
     <VideoPreview
       previewVideoRef={previewVideoRef}
-      cameraResolution={isMobile ? "portrait" : cameraResolution}
+      cameraResolution={cameraResolution}
     />
   );
 };

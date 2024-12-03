@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -13,25 +12,6 @@ const ResolutionSelector = ({
   setCameraResolution,
 }: ResolutionSelectorProps) => {
   const isMobile = useIsMobile();
-
-  // Force portrait mode on mobile
-  useEffect(() => {
-    if (isMobile) {
-      setCameraResolution("portrait");
-    }
-  }, [isMobile, setCameraResolution]);
-
-  // On mobile, don't render any options, just show current mode
-  if (isMobile) {
-    return (
-      <div className="space-y-2">
-        <Label className="text-lg font-medium">Camera Resolution</Label>
-        <div className="flex items-center space-x-4 p-4 rounded-lg border border-gray-700">
-          <Label className="cursor-default">1080x1920 (Portrait)</Label>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-2">

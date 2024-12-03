@@ -2,6 +2,7 @@ import { useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useRecordingConstraints } from "./useRecordingConstraints";
 
 export const useRecording = () => {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -9,32 +10,19 @@ export const useRecording = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const isMobile = useIsMobile();
+  const { getVideoConstraints, getAudioConstraints, getRecordingOptions } = useRecordingConstraints();
 
   const startRecording = async (
     recordingType: "camera" | "screen",
     cameraResolution: "landscape" | "portrait",
     existingStream?: MediaStream | null,
-    selectedAudioDeviceId?: string
+    selectedAudioDevice?: string
   ) => {
     try {
       let finalStream: MediaStream;
 
-      // Always use portrait resolution on mobile
-      const effectiveResolution = isMobile ? "portrait" : cameraResolution;
-
-      const videoConstraints = {
-        width: { exact: effectiveResolution === "portrait" ? 1080 : 1920 },
-        height: { exact: effectiveResolution === "portrait" ? 1920 : 1080 },
-        frameRate: { ideal: 30 }
-      };
-
-      const audioConstraints = {
-        deviceId: selectedAudioDeviceId ? { exact: selectedAudioDeviceId } : undefined,
-        echoCancellation: true,
-        noiseSuppression: true,
-        sampleRate: 48000,
-        channelCount: 2
-      };
+      const videoConstraints = getVideoConstraints(selectedAudioDevice || '', cameraResolution);
+      const audioConstraints = getAudioConstraints(selectedAudioDevice || '');
 
       // Clean up existing streams
       const existingVideoElement = document.querySelector('video');
@@ -44,10 +32,7 @@ export const useRecording = () => {
 
       if (recordingType === "camera") {
         finalStream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            ...videoConstraints,
-            facingMode: "user"
-          },
+          video: videoConstraints,
           audio: audioConstraints
         });
       } else {
@@ -61,16 +46,7 @@ export const useRecording = () => {
         });
       }
 
-      // Ensure WebM format with proper codecs
-      const options = {
-        mimeType: 'video/webm;codecs=vp8,opus',
-        videoBitsPerSecond: isMobile ? 2500000 : 8000000, // Lower bitrate for mobile
-        audioBitsPerSecond: 128000
-      };
-
-      if (!MediaRecorder.isTypeSupported(options.mimeType)) {
-        options.mimeType = 'video/webm';
-      }
+      const options = getRecordingOptions();
 
       console.log('Creating MediaRecorder with options:', options);
       const mediaRecorder = new MediaRecorder(finalStream, options);

@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import VideoPreview from "./VideoPreview";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useRecordingConstraints } from "@/hooks/useRecordingConstraints";
 
 interface PreviewManagerProps {
   isPreviewActive: boolean;
@@ -24,6 +25,7 @@ const PreviewManager = ({
 }: PreviewManagerProps) => {
   const { toast } = useToast();
   const isMobile = useIsMobile();
+  const { getVideoConstraints, getAudioConstraints } = useRecordingConstraints();
 
   useEffect(() => {
     const updatePreview = async () => {
@@ -34,26 +36,14 @@ const PreviewManager = ({
           previewVideoRef.current.srcObject.getTracks().forEach(track => track.stop());
         }
 
-        // Always use portrait constraints on mobile
-        const effectiveResolution = isMobile ? "portrait" : cameraResolution;
-
-        const videoConstraints = {
-          deviceId: selectedVideoDevice ? { exact: selectedVideoDevice } : undefined,
-          width: { ideal: effectiveResolution === "portrait" ? 1080 : 1920 },
-          height: { ideal: effectiveResolution === "portrait" ? 1920 : 1080 },
-          frameRate: { ideal: 30 },
-        };
+        const videoConstraints = getVideoConstraints(selectedVideoDevice, cameraResolution);
+        const audioConstraints = getAudioConstraints(selectedAudioDevice);
 
         console.log('Updating preview with constraints:', videoConstraints);
 
         const stream = await navigator.mediaDevices.getUserMedia({
           video: videoConstraints,
-          audio: selectedAudioDevice ? {
-            deviceId: { exact: selectedAudioDevice },
-            echoCancellation: true,
-            noiseSuppression: true,
-            sampleRate: 48000,
-          } : true,
+          audio: audioConstraints,
         });
 
         if (previewVideoRef.current) {

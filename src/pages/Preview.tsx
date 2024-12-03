@@ -54,7 +54,7 @@ const Preview = () => {
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button 
                 onClick={handleDownload}
-                className="w-full sm:w-auto bg-gradient-to-r from-primary to-primary/90 text-white font-semibold shadow-lg transition-all duration-200 ease-in-out transform hover:scale-105 hover:shadow-xl rounded-lg px-6"
+                className="w-full sm:w-auto bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-semibold shadow-lg transition-all duration-200 ease-in-out transform hover:scale-105 hover:shadow-xl hover:from-violet-700 hover:to-indigo-700 rounded-lg px-6"
               >
                 <Download className="w-4 h-4 mr-2" />
                 Download Recording
@@ -63,7 +63,7 @@ const Preview = () => {
               <Button 
                 variant="secondary"
                 onClick={() => window.open('https://vid2mp4.sideeffect.dev/', '_blank')}
-                className="w-full sm:w-auto bg-secondary/90 hover:bg-secondary text-white font-medium shadow-md transition-all duration-200 ease-in-out transform hover:scale-105 hover:shadow-lg rounded-lg"
+                className="w-full sm:w-auto bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-medium shadow-md transition-all duration-200 ease-in-out transform hover:scale-105 hover:shadow-lg hover:from-emerald-600 hover:to-teal-600 rounded-lg"
               >
                 <ExternalLink className="w-4 h-4 mr-2" />
                 Convert to MP4 (External)
@@ -72,7 +72,7 @@ const Preview = () => {
               <Button 
                 variant="secondary" 
                 onClick={() => navigate("/")}
-                className="w-full sm:w-auto bg-gray-700 hover:bg-gray-600 text-white font-medium shadow-md transition-all duration-200 ease-in-out transform hover:scale-105 hover:shadow-lg rounded-lg"
+                className="w-full sm:w-auto bg-gradient-to-r from-slate-600 to-slate-700 text-white font-medium shadow-md transition-all duration-200 ease-in-out transform hover:scale-105 hover:shadow-lg hover:from-slate-700 hover:to-slate-800 rounded-lg"
               >
                 <RotateCcw className="w-4 h-4 mr-2" />
                 Record Again
@@ -82,7 +82,8 @@ const Preview = () => {
         ) : (
           <div className="text-center p-4">
             <p className="mb-4">No recording found. Please go back and record first.</p>
-            <Button onClick={() => navigate("/")}>
+            <Button onClick={() => navigate("/")}
+                   className="bg-gradient-to-r from-violet-600 to-indigo-600 text-white hover:from-violet-700 hover:to-indigo-700">
               Go Back
             </Button>
           </div>

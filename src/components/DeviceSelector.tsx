@@ -32,7 +32,9 @@ const DeviceSelector = ({
     }
   }, [devices, label, toast]);
 
-  if (devices.length === 0) {
+  // Only show the error alert if there are truly no devices available
+  // and we're specifically looking for audio devices (microphone)
+  if (devices.length === 0 && label.toLowerCase() === "microphone") {
     return (
       <div className="space-y-2">
         <Label className="text-lg font-medium">{label}</Label>

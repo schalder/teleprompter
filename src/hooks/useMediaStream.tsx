@@ -21,18 +21,26 @@ export const useMediaStream = () => {
       let stream: MediaStream | null = null;
 
       if (recordingType === "camera") {
+        // Define base constraints
         const videoConstraints: MediaTrackConstraints = {
           deviceId: selectedVideoDeviceId ? { exact: selectedVideoDeviceId } : undefined,
-          width: { ideal: cameraResolution === "landscape" ? 1920 : 1080 },
-          height: { ideal: cameraResolution === "landscape" ? 1080 : 1920 },
-          frameRate: { ideal: 30 },
+          frameRate: { ideal: 30 }
         };
+
+        // Set resolution based on orientation
+        if (cameraResolution === "landscape") {
+          videoConstraints.width = { ideal: 1920 };
+          videoConstraints.height = { ideal: 1080 };
+        } else {
+          videoConstraints.width = { ideal: 1080 };
+          videoConstraints.height = { ideal: 1920 };
+        }
 
         const audioConstraints: MediaTrackConstraints = {
           deviceId: selectedAudioDeviceId ? { exact: selectedAudioDeviceId } : undefined,
           echoCancellation: true,
           noiseSuppression: true,
-          sampleRate: 48000,
+          sampleRate: 48000
         };
 
         console.log('Starting preview with constraints:', {
@@ -58,7 +66,6 @@ export const useMediaStream = () => {
           const settings = audioTrack.getSettings();
           console.log('Active audio track settings:', settings);
           
-          // Verify if we got the requested audio device
           if (selectedAudioDeviceId && settings.deviceId !== selectedAudioDeviceId) {
             console.warn('Warning: Active audio device differs from selected device');
             toast({
@@ -73,7 +80,7 @@ export const useMediaStream = () => {
           deviceId: selectedAudioDeviceId ? { exact: selectedAudioDeviceId } : undefined,
           echoCancellation: true,
           noiseSuppression: true,
-          sampleRate: 48000,
+          sampleRate: 48000
         };
 
         stream = await navigator.mediaDevices.getDisplayMedia({

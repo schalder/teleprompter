@@ -30,11 +30,18 @@ export const useRecording = () => {
 
       if (recordingType === "camera") {
         const videoConstraints: MediaTrackConstraints = {
-          width: { exact: cameraResolution === "landscape" ? 1920 : 1080 },
-          height: { exact: cameraResolution === "landscape" ? 1080 : 1920 },
           frameRate: { ideal: 30 },
           facingMode: "user"
         };
+
+        // Set resolution based on orientation
+        if (cameraResolution === "landscape") {
+          videoConstraints.width = { exact: 1920 };
+          videoConstraints.height = { exact: 1080 };
+        } else {
+          videoConstraints.width = { exact: 1080 };
+          videoConstraints.height = { exact: 1920 };
+        }
 
         console.log('Video constraints:', videoConstraints);
 
@@ -73,13 +80,14 @@ export const useRecording = () => {
         });
       }
 
-      // Improved MediaRecorder options for better mobile compatibility
+      // Optimized MediaRecorder options for mobile
       const options = {
-        mimeType: 'video/webm;codecs=h264,opus',
-        videoBitsPerSecond: 2500000, // Reduced for better mobile handling
+        mimeType: 'video/webm;codecs=vp8,opus', // Changed to VP8 for better mobile support
+        videoBitsPerSecond: 2500000,
         audioBitsPerSecond: 128000
       };
       
+      // Fallback if the preferred codec isn't supported
       if (!MediaRecorder.isTypeSupported(options.mimeType)) {
         options.mimeType = 'video/webm';
       }
@@ -89,7 +97,6 @@ export const useRecording = () => {
       mediaRecorderRef.current = mediaRecorder;
       chunksRef.current = [];
 
-      // Collect data more frequently on mobile
       mediaRecorder.ondataavailable = (event) => {
         if (event.data && event.data.size > 0) {
           console.log('Received chunk of size:', event.data.size);
@@ -100,25 +107,22 @@ export const useRecording = () => {
       mediaRecorder.onstop = () => {
         console.log('Recording stopped, total chunks:', chunksRef.current.length);
         
-        // Ensure all chunks are collected before creating blob
         const blob = new Blob(chunksRef.current, { 
-          type: mediaRecorder.mimeType || 'video/webm' 
+          type: 'video/webm' // Force WebM format
         });
         
         console.log('Final blob size:', blob.size);
         
-        // Clean up the stream
         finalStream.getTracks().forEach(track => track.stop());
         
         navigate("/preview", { 
           state: { 
-            videoUrl: URL.createObjectURL(blob), 
-            mimeType: mediaRecorder.mimeType 
+            videoUrl: URL.createObjectURL(blob),
+            mimeType: 'video/webm'
           } 
         });
       };
 
-      // Collect chunks more frequently (every 500ms instead of 1000ms)
       console.log('Starting recording with timeslice: 500ms');
       mediaRecorder.start(500);
       

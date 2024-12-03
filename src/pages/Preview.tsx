@@ -16,12 +16,9 @@ const Preview = () => {
     fetch(videoUrl)
       .then(response => response.blob())
       .then(blob => {
-        let fileExtension = 'webm';
-        if (mimeType?.includes('mp4')) fileExtension = 'mp4';
-        else if (mimeType?.includes('quicktime')) fileExtension = 'mov';
-        
+        const fileExtension = mimeType?.includes('mp4') ? 'mp4' : 'webm';
         const url = window.URL.createObjectURL(
-          new Blob([blob], { type: mimeType || 'video/webm' })
+          new Blob([blob], { type: mimeType || 'video/mp4' })
         );
         const a = document.createElement("a");
         a.href = url;
@@ -35,11 +32,6 @@ const Preview = () => {
       })
       .catch(error => {
         console.error("Error downloading video:", error);
-        toast({
-          variant: "destructive",
-          title: "Download Failed",
-          description: "There was an error downloading your video. Please try again.",
-        });
       });
   };
 
@@ -74,7 +66,7 @@ const Preview = () => {
                 className="w-full sm:w-auto"
               >
                 <ExternalLink className="w-4 h-4 mr-2" />
-                Convert Format (External)
+                Convert to MP4 (External)
               </Button>
 
               <Button 

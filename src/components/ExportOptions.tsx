@@ -40,7 +40,6 @@ export const ExportOptions = ({ onExport }: ExportOptionsProps) => {
             <SelectContent>
               <SelectItem value="mp4">MP4</SelectItem>
               <SelectItem value="webm">WebM</SelectItem>
-              <SelectItem value="mov">MOV</SelectItem>
               <SelectItem value="gif">GIF</SelectItem>
             </SelectContent>
           </Select>

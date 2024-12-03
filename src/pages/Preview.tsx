@@ -54,7 +54,7 @@ const Preview = () => {
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button 
                 onClick={handleDownload}
-                className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-white font-semibold shadow-lg transition-all duration-200 ease-in-out transform hover:scale-105"
+                className="w-full sm:w-auto bg-gradient-to-r from-primary to-primary/90 text-white font-semibold shadow-lg transition-all duration-200 ease-in-out transform hover:scale-105 hover:shadow-xl rounded-lg px-6"
               >
                 <Download className="w-4 h-4 mr-2" />
                 Download Recording
@@ -63,7 +63,7 @@ const Preview = () => {
               <Button 
                 variant="secondary"
                 onClick={() => window.open('https://vid2mp4.sideeffect.dev/', '_blank')}
-                className="w-full sm:w-auto bg-secondary hover:bg-secondary/80 text-white"
+                className="w-full sm:w-auto bg-secondary/90 hover:bg-secondary text-white font-medium shadow-md transition-all duration-200 ease-in-out transform hover:scale-105 hover:shadow-lg rounded-lg"
               >
                 <ExternalLink className="w-4 h-4 mr-2" />
                 Convert to MP4 (External)
@@ -72,7 +72,7 @@ const Preview = () => {
               <Button 
                 variant="secondary" 
                 onClick={() => navigate("/")}
-                className="w-full sm:w-auto bg-gray-700 hover:bg-gray-600 text-white"
+                className="w-full sm:w-auto bg-gray-700 hover:bg-gray-600 text-white font-medium shadow-md transition-all duration-200 ease-in-out transform hover:scale-105 hover:shadow-lg rounded-lg"
               >
                 <RotateCcw className="w-4 h-4 mr-2" />
                 Record Again

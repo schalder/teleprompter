@@ -21,7 +21,10 @@ export const ExportOptions = ({ onExport, videoUrl }: ExportOptionsProps) => {
       if (format === 'mp4' && videoUrl) {
         // Convert WebM to MP4
         const webmBlob = await fetch(videoUrl).then(r => r.blob());
-        const mp4Blob = await webmToMp4(webmBlob);
+        const arrayBuffer = await webmBlob.arrayBuffer();
+        const uint8Array = new Uint8Array(arrayBuffer);
+        const mp4ArrayBuffer = await webmToMp4(uint8Array);
+        const mp4Blob = new Blob([mp4ArrayBuffer], { type: 'video/mp4' });
         
         // Create download link
         const url = URL.createObjectURL(mp4Blob);

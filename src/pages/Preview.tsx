@@ -54,7 +54,7 @@ const Preview = () => {
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button 
                 onClick={handleDownload}
-                className="w-full sm:w-auto"
+                className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-white font-semibold shadow-lg transition-all duration-200 ease-in-out transform hover:scale-105"
               >
                 <Download className="w-4 h-4 mr-2" />
                 Download Recording
@@ -62,8 +62,8 @@ const Preview = () => {
               
               <Button 
                 variant="secondary"
-                onClick={() => window.open('https://cloudconvert.com/webm-to-mp4', '_blank')}
-                className="w-full sm:w-auto"
+                onClick={() => window.open('https://vid2mp4.sideeffect.dev/', '_blank')}
+                className="w-full sm:w-auto bg-secondary hover:bg-secondary/80 text-white"
               >
                 <ExternalLink className="w-4 h-4 mr-2" />
                 Convert to MP4 (External)

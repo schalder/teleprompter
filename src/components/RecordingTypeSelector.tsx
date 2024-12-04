@@ -1,6 +1,5 @@
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { Camera, Monitor } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface RecordingTypeSelectorProps {
   recordingType: "camera" | "screen";
@@ -12,33 +11,18 @@ const RecordingTypeSelector = ({
   setRecordingType,
 }: RecordingTypeSelectorProps) => {
   return (
-    <RadioGroup
-      value={recordingType}
-      onValueChange={(value: "camera" | "screen") => setRecordingType(value)}
-      className="grid grid-cols-1 gap-4"
-    >
-      <div className="flex items-center space-x-4 p-4 rounded-lg border border-gray-700 hover:bg-gray-800 cursor-pointer">
-        <RadioGroupItem value="camera" id="camera" className="border-white text-white" />
-        <Label htmlFor="camera" className="flex items-center space-x-3 cursor-pointer">
-          <Camera className="w-5 h-5" />
-          <div>
-            <div className="font-medium">Camera Only</div>
-            <div className="text-sm text-gray-400">Record yourself using your webcam</div>
-          </div>
-        </Label>
-      </div>
-
-      <div className="flex items-center space-x-4 p-4 rounded-lg border border-gray-700 hover:bg-gray-800 cursor-pointer">
-        <RadioGroupItem value="screen" id="screen" className="border-white text-white" />
-        <Label htmlFor="screen" className="flex items-center space-x-3 cursor-pointer">
-          <Monitor className="w-5 h-5" />
-          <div>
-            <div className="font-medium">Screen Only</div>
-            <div className="text-sm text-gray-400">Record your screen</div>
-          </div>
-        </Label>
-      </div>
-    </RadioGroup>
+    <div className="space-y-2">
+      <Label className="text-lg font-medium">Recording Type</Label>
+      <Select value={recordingType} onValueChange={(value: "camera" | "screen") => setRecordingType(value)}>
+        <SelectTrigger className="w-full bg-gray-800 border-gray-700 text-white">
+          <SelectValue placeholder="Select recording type" />
+        </SelectTrigger>
+        <SelectContent className="bg-gray-800 border-gray-700">
+          <SelectItem value="camera" className="text-white hover:bg-gray-700">Camera Recording</SelectItem>
+          <SelectItem value="screen" className="text-white hover:bg-gray-700">Screen Recording</SelectItem>
+        </SelectContent>
+      </Select>
+    </div>
   );
 };
 

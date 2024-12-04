@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import VideoPreview from "./VideoPreview";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface PreviewManagerProps {
   isPreviewActive: boolean;
@@ -22,6 +23,7 @@ const PreviewManager = ({
   previewVideoRef
 }: PreviewManagerProps) => {
   const { toast } = useToast();
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     const updatePreview = async () => {
@@ -32,52 +34,30 @@ const PreviewManager = ({
           previewVideoRef.current.srcObject.getTracks().forEach(track => track.stop());
         }
 
-        console.log('Updating preview with devices:', {
-          video: selectedVideoDevice,
-          audio: selectedAudioDevice
-        });
+        const width = cameraResolution === "landscape" ? 1920 : 1080;
+        const height = cameraResolution === "landscape" ? 1080 : 1920;
 
         const stream = await navigator.mediaDevices.getUserMedia({
           video: selectedVideoDevice ? {
             deviceId: { exact: selectedVideoDevice },
-            width: { ideal: cameraResolution === "landscape" ? 1920 : 1080 },
-            height: { ideal: cameraResolution === "landscape" ? 1080 : 1920 },
+            width: { exact: width },
+            height: { exact: height },
             frameRate: { ideal: 30 },
-          } : true,
+          } : false,
           audio: selectedAudioDevice ? {
             deviceId: { exact: selectedAudioDevice },
             echoCancellation: true,
             noiseSuppression: true,
             sampleRate: 48000,
-          } : true,
+          } : false,
         });
 
         if (previewVideoRef.current) {
           previewVideoRef.current.srcObject = stream;
-          await previewVideoRef.current.play().catch(e => {
-            console.error('Error playing video:', e);
-            toast({
-              variant: "destructive",
-              title: "Preview Error",
-              description: "Failed to play video preview. Please check your camera permissions.",
-            });
-          });
-          
-          console.log('Preview updated with new devices');
-          
-          const audioTrack = stream.getAudioTracks()[0];
-          if (audioTrack) {
-            const settings = audioTrack.getSettings();
-            console.log('Preview audio track settings:', settings);
-          }
+          await previewVideoRef.current.play();
         }
       } catch (error) {
         console.error('Error updating preview:', error);
-        toast({
-          variant: "destructive",
-          title: "Preview Error",
-          description: "Failed to update preview with selected devices.",
-        });
       }
     };
 

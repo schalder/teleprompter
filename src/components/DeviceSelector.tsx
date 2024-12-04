@@ -2,6 +2,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface DeviceSelectorProps {
   label: string;
@@ -19,26 +20,32 @@ const DeviceSelector = ({
   placeholder,
 }: DeviceSelectorProps) => {
   const { toast } = useToast();
+  const isMobile = useIsMobile();
 
   useEffect(() => {
-    // Only show the toast if we have no devices and at least one permission check has occurred
-    if (devices.length === 0 && navigator.permissions) {
-      navigator.permissions.query({ name: 'microphone' as PermissionName })
-        .then(permissionStatus => {
-          if (permissionStatus.state !== 'granted') {
+    const checkPermissions = async () => {
+      if (devices.length === 0 && navigator.permissions) {
+        try {
+          const permissionName = label.toLowerCase().includes('camera') ? 'camera' : 'microphone';
+          const result = await navigator.permissions.query({ name: permissionName as PermissionName });
+          
+          if (result.state !== 'granted') {
             toast({
               variant: "destructive",
               title: `No ${label.toLowerCase()} detected`,
-              description: `Please connect a ${label.toLowerCase()} and grant permissions.`,
+              description: isMobile
+                ? `Please grant ${label.toLowerCase()} permissions in your device settings.`
+                : `Please connect a ${label.toLowerCase()} and grant permissions.`,
             });
           }
-        })
-        .catch(() => {
-          // If we can't query permissions, don't show the toast
-          console.log(`Unable to query ${label.toLowerCase()} permissions`);
-        });
-    }
-  }, [devices, label, toast]);
+        } catch (error) {
+          console.log(`Unable to query ${label.toLowerCase()} permissions:`, error);
+        }
+      }
+    };
+
+    checkPermissions();
+  }, [devices, label, toast, isMobile]);
 
   return (
     <div className="space-y-2">

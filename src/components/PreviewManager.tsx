@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import VideoPreview from "./VideoPreview";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface PreviewManagerProps {
   isPreviewActive: boolean;
@@ -22,6 +23,7 @@ const PreviewManager = ({
   previewVideoRef
 }: PreviewManagerProps) => {
   const { toast } = useToast();
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     const updatePreview = async () => {
@@ -34,7 +36,9 @@ const PreviewManager = ({
 
         console.log('Updating preview with devices:', {
           video: selectedVideoDevice,
-          audio: selectedAudioDevice
+          audio: selectedAudioDevice,
+          isMobile,
+          resolution: cameraResolution
         });
 
         const stream = await navigator.mediaDevices.getUserMedia({
@@ -43,6 +47,7 @@ const PreviewManager = ({
             width: { ideal: cameraResolution === "landscape" ? 1920 : 1080 },
             height: { ideal: cameraResolution === "landscape" ? 1080 : 1920 },
             frameRate: { ideal: 30 },
+            facingMode: isMobile ? "environment" : "user"
           } : true,
           audio: selectedAudioDevice ? {
             deviceId: { exact: selectedAudioDevice },
@@ -63,12 +68,17 @@ const PreviewManager = ({
             });
           });
           
-          console.log('Preview updated with new devices');
+          console.log('Preview updated successfully');
           
+          const videoTrack = stream.getVideoTracks()[0];
           const audioTrack = stream.getAudioTracks()[0];
+          
+          if (videoTrack) {
+            console.log('Video track settings:', videoTrack.getSettings());
+          }
+          
           if (audioTrack) {
-            const settings = audioTrack.getSettings();
-            console.log('Preview audio track settings:', settings);
+            console.log('Audio track settings:', audioTrack.getSettings());
           }
         }
       } catch (error) {
@@ -76,13 +86,15 @@ const PreviewManager = ({
         toast({
           variant: "destructive",
           title: "Preview Error",
-          description: "Failed to update preview with selected devices.",
+          description: isMobile 
+            ? "Failed to access camera. Please ensure camera permissions are granted and try again."
+            : "Failed to update preview with selected devices.",
         });
       }
     };
 
     updatePreview();
-  }, [selectedVideoDevice, selectedAudioDevice, isPreviewActive, recordingType, cameraResolution, hasPermissions]);
+  }, [selectedVideoDevice, selectedAudioDevice, isPreviewActive, recordingType, cameraResolution, hasPermissions, isMobile]);
 
   if (!isPreviewActive) return null;
 

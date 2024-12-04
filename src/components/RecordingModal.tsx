@@ -7,6 +7,7 @@ import ResolutionSelector from "./ResolutionSelector";
 import RecordingTypeSelector from "./RecordingTypeSelector";
 import PreviewManager from "./PreviewManager";
 import { useDeviceManagement } from "@/hooks/useDeviceManagement";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface RecordingModalProps {
   isOpen: boolean;
@@ -43,6 +44,8 @@ const RecordingModal = ({
     updateDevices,
     hasPermissions
   } = useDeviceManagement(selectedAudioDevice, setSelectedAudioDevice);
+  
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     if (isOpen) {
@@ -56,7 +59,7 @@ const RecordingModal = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px] bg-gray-900 text-white flex flex-col h-[90vh]">
+      <DialogContent className={`sm:max-w-[425px] bg-gray-900 text-white flex flex-col ${isMobile ? 'h-[100vh]' : 'h-[90vh]'}`}>
         <DialogTitle className="text-2xl font-bold text-center">Start Recording</DialogTitle>
         
         <div className="flex-1 overflow-hidden">

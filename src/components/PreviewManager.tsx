@@ -1,6 +1,6 @@
 import { useEffect } from "react";
+import { useToast } from "@/components/ui/use-toast";
 import VideoPreview from "./VideoPreview";
-import { useIsMobile } from "@/hooks/use-mobile";
 
 interface PreviewManagerProps {
   isPreviewActive: boolean;
@@ -21,66 +21,68 @@ const PreviewManager = ({
   cameraResolution,
   previewVideoRef
 }: PreviewManagerProps) => {
-  const isMobile = useIsMobile();
+  const { toast } = useToast();
 
   useEffect(() => {
     const updatePreview = async () => {
       if (!isPreviewActive || recordingType !== "camera" || !hasPermissions) return;
 
       try {
-        // Stop any existing tracks
         if (previewVideoRef.current?.srcObject instanceof MediaStream) {
-          const tracks = previewVideoRef.current.srcObject.getTracks();
-          tracks.forEach(track => track.stop());
-          previewVideoRef.current.srcObject = null;
+          previewVideoRef.current.srcObject.getTracks().forEach(track => track.stop());
         }
 
-        // Set dimensions based on resolution and device type
-        const width = isMobile ? 
-          (cameraResolution === "portrait" ? 1080 : 1920) : 
-          (cameraResolution === "landscape" ? 1920 : 1080);
-        const height = isMobile ? 
-          (cameraResolution === "portrait" ? 1920 : 1080) : 
-          (cameraResolution === "landscape" ? 1080 : 1920);
-
-        console.log(`Requesting stream with dimensions: ${width}x${height}, device: ${selectedVideoDevice}`);
+        console.log('Updating preview with devices:', {
+          video: selectedVideoDevice,
+          audio: selectedAudioDevice
+        });
 
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: {
+          video: selectedVideoDevice ? {
             deviceId: { exact: selectedVideoDevice },
-            width: { ideal: width },
-            height: { ideal: height },
+            width: { ideal: cameraResolution === "landscape" ? 1920 : 1080 },
+            height: { ideal: cameraResolution === "landscape" ? 1080 : 1920 },
             frameRate: { ideal: 30 },
-          },
+          } : true,
           audio: selectedAudioDevice ? {
             deviceId: { exact: selectedAudioDevice },
             echoCancellation: true,
             noiseSuppression: true,
             sampleRate: 48000,
-          } : false,
+          } : true,
         });
 
         if (previewVideoRef.current) {
           previewVideoRef.current.srcObject = stream;
-          await previewVideoRef.current.play().catch(error => {
-            console.error('Preview play error:', error);
+          await previewVideoRef.current.play().catch(e => {
+            console.error('Error playing video:', e);
+            toast({
+              variant: "destructive",
+              title: "Preview Error",
+              description: "Failed to play video preview. Please check your camera permissions.",
+            });
           });
+          
+          console.log('Preview updated with new devices');
+          
+          const audioTrack = stream.getAudioTracks()[0];
+          if (audioTrack) {
+            const settings = audioTrack.getSettings();
+            console.log('Preview audio track settings:', settings);
+          }
         }
       } catch (error) {
         console.error('Error updating preview:', error);
+        toast({
+          variant: "destructive",
+          title: "Preview Error",
+          description: "Failed to update preview with selected devices.",
+        });
       }
     };
 
     updatePreview();
-
-    // Cleanup function to stop tracks when unmounting or updating
-    return () => {
-      if (previewVideoRef.current?.srcObject instanceof MediaStream) {
-        const tracks = previewVideoRef.current.srcObject.getTracks();
-        tracks.forEach(track => track.stop());
-      }
-    };
-  }, [selectedVideoDevice, selectedAudioDevice, isPreviewActive, recordingType, cameraResolution, hasPermissions, isMobile]);
+  }, [selectedVideoDevice, selectedAudioDevice, isPreviewActive, recordingType, cameraResolution, hasPermissions]);
 
   if (!isPreviewActive) return null;
 

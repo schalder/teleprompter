@@ -1,5 +1,5 @@
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 interface ResolutionSelectorProps {
@@ -16,22 +16,20 @@ const ResolutionSelector = ({
   return (
     <div className="space-y-2">
       <Label className="text-lg font-medium">Camera Resolution</Label>
-      <Select 
-        value={cameraResolution} 
+      <RadioGroup
+        value={cameraResolution}
         onValueChange={(value: "landscape" | "portrait") => setCameraResolution(value)}
+        className="grid grid-cols-1 gap-4"
       >
-        <SelectTrigger className="w-full bg-gray-800 border-gray-700 text-white">
-          <SelectValue placeholder="Select resolution" />
-        </SelectTrigger>
-        <SelectContent className="bg-gray-800 border-gray-700">
-          <SelectItem value="landscape" className="text-white hover:bg-gray-700">
-            1920x1080 (Landscape)
-          </SelectItem>
-          <SelectItem value="portrait" className="text-white hover:bg-gray-700">
-            1080x1920 (Portrait)
-          </SelectItem>
-        </SelectContent>
-      </Select>
+        <div className="flex items-center space-x-4 p-4 rounded-lg border border-gray-700 hover:bg-gray-800 cursor-pointer">
+          <RadioGroupItem value="landscape" id="landscape" className="border-white text-white" />
+          <Label htmlFor="landscape" className="cursor-pointer">1920x1080 (Landscape)</Label>
+        </div>
+        <div className="flex items-center space-x-4 p-4 rounded-lg border border-gray-700 hover:bg-gray-800 cursor-pointer">
+          <RadioGroupItem value="portrait" id="portrait" className="border-white text-white" />
+          <Label htmlFor="portrait" className="cursor-pointer">1080x1920 (Portrait)</Label>
+        </div>
+      </RadioGroup>
     </div>
   );
 };

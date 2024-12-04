@@ -2,15 +2,11 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import TeleprompterControls from "@/components/TeleprompterControls";
+import RecordingModal from "@/components/RecordingModal";
 import TeleprompterPreview from "@/components/TeleprompterPreview";
+import RecordingControls from "@/components/RecordingControls";
 import { useMediaStream } from "@/hooks/useMediaStream";
 import { useRecording } from "@/hooks/useRecording";
-import DeviceSelector from "@/components/DeviceSelector";
-import ResolutionSelector from "@/components/ResolutionSelector";
-import RecordingTypeSelector from "@/components/RecordingTypeSelector";
-import PreviewManager from "@/components/PreviewManager";
-import { useDeviceManagement } from "@/hooks/useDeviceManagement";
-import { Square } from "lucide-react";
 
 const Index = () => {
   const [text, setText] = useState("");
@@ -20,7 +16,7 @@ const Index = () => {
   const [isPreviewing, setIsPreviewing] = useState(false);
   const [recordingType, setRecordingType] = useState<"camera" | "screen">("camera");
   const [cameraResolution, setCameraResolution] = useState<"landscape" | "portrait">("landscape");
-  const [selectedAudioDevice, setSelectedAudioDevice] = useState<string>("");
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const { 
     previewStream, 
@@ -35,28 +31,13 @@ const Index = () => {
     stopRecording 
   } = useRecording();
 
-  const {
-    videoDevices,
-    audioDevices,
-    selectedVideoDevice,
-    setSelectedVideoDevice,
-    updateDevices,
-    hasPermissions
-  } = useDeviceManagement(selectedAudioDevice, setSelectedAudioDevice);
+  const [selectedAudioDevice, setSelectedAudioDevice] = useState<string>("");
 
   useEffect(() => {
-    updateDevices();
-    navigator.mediaDevices.addEventListener('devicechange', updateDevices);
-    return () => {
-      navigator.mediaDevices.removeEventListener('devicechange', updateDevices);
-    };
-  }, [hasPermissions]);
-
-  useEffect(() => {
-    if (isPreviewing) {
+    if (isModalOpen) {
       startPreview(recordingType, cameraResolution);
     }
-  }, [recordingType, isPreviewing, cameraResolution]);
+  }, [recordingType, isModalOpen, cameraResolution]);
 
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -65,23 +46,20 @@ const Index = () => {
   const togglePreview = () => {
     scrollToTop();
     setIsPreviewing(!isPreviewing);
-    if (!isPreviewing) {
-      startPreview(recordingType, cameraResolution);
-    } else {
-      stopPreview();
-    }
   };
 
   const handleStartRecording = async () => {
     scrollToTop();
+    // Pass the existing screen capture stream if available and the selected audio device
     const success = await startRecording(
       recordingType, 
       cameraResolution,
       recordingType === "screen" ? screenCaptureStream : null,
-      selectedAudioDevice
+      selectedAudioDevice // Add this parameter
     );
     if (success) {
       setIsRecording(true);
+      setIsModalOpen(false);
     }
   };
 
@@ -96,64 +74,7 @@ const Index = () => {
       <div className="max-w-4xl mx-auto space-y-6">
         <h1 className="text-2xl sm:text-3xl font-bold text-center mb-6">Teleprompter For Digital Creators</h1>
         
-        {/* Recording Controls */}
-        <div className="fixed top-4 right-4 z-50">
-          {isRecording && (
-            <Button
-              onClick={handleStopRecording}
-              variant="destructive"
-              className="py-6 text-lg"
-            >
-              <Square className="w-5 h-5 mr-2" />
-              Stop Recording
-            </Button>
-          )}
-        </div>
-
-        {/* Device Controls */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-gray-800 p-4 rounded-lg">
-          <RecordingTypeSelector
-            recordingType={recordingType}
-            setRecordingType={setRecordingType}
-          />
-          
-          {recordingType === "camera" && (
-            <>
-              <DeviceSelector
-                label="Camera"
-                devices={videoDevices}
-                selectedDevice={selectedVideoDevice}
-                onDeviceChange={setSelectedVideoDevice}
-                placeholder="Select a camera"
-              />
-
-              <DeviceSelector
-                label="Microphone"
-                devices={audioDevices}
-                selectedDevice={selectedAudioDevice}
-                onDeviceChange={setSelectedAudioDevice}
-                placeholder="Select a microphone"
-              />
-
-              <ResolutionSelector
-                cameraResolution={cameraResolution}
-                setCameraResolution={setCameraResolution}
-              />
-            </>
-          )}
-        </div>
-
-        {/* Preview */}
         <div className="relative w-full overflow-hidden rounded-lg bg-gray-800">
-          <PreviewManager
-            isPreviewActive={isPreviewing}
-            recordingType={recordingType}
-            hasPermissions={hasPermissions}
-            selectedVideoDevice={selectedVideoDevice}
-            selectedAudioDevice={selectedAudioDevice}
-            cameraResolution={cameraResolution}
-            previewVideoRef={previewVideoRef}
-          />
           <TeleprompterPreview
             text={text}
             fontSize={fontSize}
@@ -170,24 +91,13 @@ const Index = () => {
             setSpeed={setSpeed}
           />
 
-          {!isRecording && (
-            <div className="flex flex-col sm:flex-row gap-3">
-              <Button
-                onClick={togglePreview}
-                variant="secondary"
-                className="w-full py-6 text-lg"
-              >
-                {isPreviewing ? "Stop Preview" : "Preview Scroll"}
-              </Button>
-              <Button
-                onClick={handleStartRecording}
-                variant="default"
-                className="w-full py-6 text-lg"
-              >
-                Start Recording
-              </Button>
-            </div>
-          )}
+          <RecordingControls
+            isRecording={isRecording}
+            onStartRecording={() => setIsModalOpen(true)}
+            onStopRecording={handleStopRecording}
+            isPreviewing={isPreviewing}
+            onTogglePreview={togglePreview}
+          />
         </div>
 
         <Textarea
@@ -195,6 +105,23 @@ const Index = () => {
           onChange={(e) => setText(e.target.value)}
           placeholder="Enter your script here..."
           className="h-40 bg-gray-800 border-gray-700 text-base sm:text-lg"
+        />
+
+        <RecordingModal
+          isOpen={isModalOpen}
+          onClose={() => {
+            setIsModalOpen(false);
+            stopPreview();
+          }}
+          recordingType={recordingType}
+          setRecordingType={setRecordingType}
+          onStartRecording={handleStartRecording}
+          previewVideoRef={previewVideoRef}
+          isPreviewActive={!!previewStream}
+          cameraResolution={cameraResolution}
+          setCameraResolution={setCameraResolution}
+          selectedAudioDevice={selectedAudioDevice} // Add this prop
+          setSelectedAudioDevice={setSelectedAudioDevice} // Add this prop
         />
       </div>
     </div>

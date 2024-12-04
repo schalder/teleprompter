@@ -5,26 +5,19 @@ export const useDevicePermissions = () => {
   const [hasPermissions, setHasPermissions] = useState(false);
   const { toast } = useToast();
 
-  const checkPermissions = async (deviceId?: string) => {
+  const checkPermissions = async () => {
     try {
-      const constraints: MediaStreamConstraints = {
-        video: deviceId ? { deviceId: { exact: deviceId } } : true,
-        audio: true
-      };
-
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       stream.getTracks().forEach(track => track.stop());
       setHasPermissions(true);
       return true;
     } catch (error) {
       console.error('Permission check failed:', error);
-      if (error instanceof Error && error.name === "NotAllowedError") {
-        toast({
-          variant: "destructive",
-          title: "Permission Required",
-          description: "Please grant camera and microphone access to continue.",
-        });
-      }
+      toast({
+        variant: "destructive",
+        title: "Permission Error",
+        description: "Please grant camera and microphone permissions to use this feature.",
+      });
       setHasPermissions(false);
       return false;
     }

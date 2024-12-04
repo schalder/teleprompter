@@ -19,8 +19,9 @@ export const useRecording = () => {
     try {
       let finalStream: MediaStream;
 
-      const width = cameraResolution === "landscape" ? 1920 : 1080;
-      const height = cameraResolution === "landscape" ? 1080 : 1920;
+      // Force portrait mode on mobile
+      const width = isMobile ? 1080 : (cameraResolution === "landscape" ? 1920 : 1080);
+      const height = isMobile ? 1920 : (cameraResolution === "landscape" ? 1080 : 1920);
 
       if (recordingType === "camera") {
         finalStream = await navigator.mediaDevices.getUserMedia({
@@ -36,6 +37,19 @@ export const useRecording = () => {
             sampleRate: 48000,
           } : true,
         });
+
+        // Ensure video track has correct dimensions
+        const videoTrack = finalStream.getVideoTracks()[0];
+        const settings = videoTrack.getSettings();
+        console.log('Video track settings:', settings);
+
+        if (settings.width !== width || settings.height !== height) {
+          const constraints = {
+            width: { exact: width },
+            height: { exact: height }
+          };
+          await videoTrack.applyConstraints(constraints);
+        }
       } else {
         finalStream = await navigator.mediaDevices.getDisplayMedia({
           video: {

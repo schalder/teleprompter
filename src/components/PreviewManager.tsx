@@ -1,5 +1,4 @@
 import { useEffect } from "react";
-import { useToast } from "@/components/ui/use-toast";
 import VideoPreview from "./VideoPreview";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -22,7 +21,6 @@ const PreviewManager = ({
   cameraResolution,
   previewVideoRef
 }: PreviewManagerProps) => {
-  const { toast } = useToast();
   const isMobile = useIsMobile();
 
   useEffect(() => {
@@ -34,8 +32,9 @@ const PreviewManager = ({
           previewVideoRef.current.srcObject.getTracks().forEach(track => track.stop());
         }
 
-        const width = cameraResolution === "landscape" ? 1920 : 1080;
-        const height = cameraResolution === "landscape" ? 1080 : 1920;
+        // Force portrait mode on mobile
+        const width = isMobile ? 1080 : (cameraResolution === "landscape" ? 1920 : 1080);
+        const height = isMobile ? 1920 : (cameraResolution === "landscape" ? 1080 : 1920);
 
         const stream = await navigator.mediaDevices.getUserMedia({
           video: selectedVideoDevice ? {
@@ -62,14 +61,14 @@ const PreviewManager = ({
     };
 
     updatePreview();
-  }, [selectedVideoDevice, selectedAudioDevice, isPreviewActive, recordingType, cameraResolution, hasPermissions]);
+  }, [selectedVideoDevice, selectedAudioDevice, isPreviewActive, recordingType, cameraResolution, hasPermissions, isMobile]);
 
   if (!isPreviewActive) return null;
 
   return (
     <VideoPreview
       previewVideoRef={previewVideoRef}
-      cameraResolution={cameraResolution}
+      cameraResolution={isMobile ? "portrait" : cameraResolution}
     />
   );
 };

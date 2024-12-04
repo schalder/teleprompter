@@ -28,21 +28,30 @@ const PreviewManager = ({
       if (!isPreviewActive || recordingType !== "camera" || !hasPermissions) return;
 
       try {
+        // Stop any existing tracks
         if (previewVideoRef.current?.srcObject instanceof MediaStream) {
-          previewVideoRef.current.srcObject.getTracks().forEach(track => track.stop());
+          const tracks = previewVideoRef.current.srcObject.getTracks();
+          tracks.forEach(track => track.stop());
+          previewVideoRef.current.srcObject = null;
         }
 
-        // Force portrait mode on mobile
-        const width = isMobile ? 1080 : (cameraResolution === "landscape" ? 1920 : 1080);
-        const height = isMobile ? 1920 : (cameraResolution === "landscape" ? 1080 : 1920);
+        // Set dimensions based on resolution and device type
+        const width = isMobile ? 
+          (cameraResolution === "portrait" ? 1080 : 1920) : 
+          (cameraResolution === "landscape" ? 1920 : 1080);
+        const height = isMobile ? 
+          (cameraResolution === "portrait" ? 1920 : 1080) : 
+          (cameraResolution === "landscape" ? 1080 : 1920);
+
+        console.log(`Requesting stream with dimensions: ${width}x${height}, device: ${selectedVideoDevice}`);
 
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: selectedVideoDevice ? {
+          video: {
             deviceId: { exact: selectedVideoDevice },
-            width: { exact: width },
-            height: { exact: height },
+            width: { ideal: width },
+            height: { ideal: height },
             frameRate: { ideal: 30 },
-          } : false,
+          },
           audio: selectedAudioDevice ? {
             deviceId: { exact: selectedAudioDevice },
             echoCancellation: true,
@@ -53,7 +62,9 @@ const PreviewManager = ({
 
         if (previewVideoRef.current) {
           previewVideoRef.current.srcObject = stream;
-          await previewVideoRef.current.play();
+          await previewVideoRef.current.play().catch(error => {
+            console.error('Preview play error:', error);
+          });
         }
       } catch (error) {
         console.error('Error updating preview:', error);
@@ -61,6 +72,14 @@ const PreviewManager = ({
     };
 
     updatePreview();
+
+    // Cleanup function to stop tracks when unmounting or updating
+    return () => {
+      if (previewVideoRef.current?.srcObject instanceof MediaStream) {
+        const tracks = previewVideoRef.current.srcObject.getTracks();
+        tracks.forEach(track => track.stop());
+      }
+    };
   }, [selectedVideoDevice, selectedAudioDevice, isPreviewActive, recordingType, cameraResolution, hasPermissions, isMobile]);
 
   if (!isPreviewActive) return null;
@@ -68,7 +87,7 @@ const PreviewManager = ({
   return (
     <VideoPreview
       previewVideoRef={previewVideoRef}
-      cameraResolution={isMobile ? "portrait" : cameraResolution}
+      cameraResolution={cameraResolution}
     />
   );
 };

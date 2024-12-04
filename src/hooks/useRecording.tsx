@@ -19,9 +19,15 @@ export const useRecording = () => {
     try {
       let finalStream: MediaStream;
 
-      // Force portrait mode on mobile
-      const width = isMobile ? 1080 : (cameraResolution === "landscape" ? 1920 : 1080);
-      const height = isMobile ? 1920 : (cameraResolution === "landscape" ? 1080 : 1920);
+      // Set dimensions based on resolution and device type
+      const width = isMobile ? 
+        (cameraResolution === "portrait" ? 1080 : 1920) : 
+        (cameraResolution === "landscape" ? 1920 : 1080);
+      const height = isMobile ? 
+        (cameraResolution === "portrait" ? 1920 : 1080) : 
+        (cameraResolution === "landscape" ? 1080 : 1920);
+
+      console.log(`Recording with dimensions: ${width}x${height}, resolution: ${cameraResolution}`);
 
       if (recordingType === "camera") {
         finalStream = await navigator.mediaDevices.getUserMedia({
@@ -38,17 +44,17 @@ export const useRecording = () => {
           } : true,
         });
 
-        // Ensure video track has correct dimensions
+        // Double-check video track settings
         const videoTrack = finalStream.getVideoTracks()[0];
         const settings = videoTrack.getSettings();
         console.log('Video track settings:', settings);
 
         if (settings.width !== width || settings.height !== height) {
-          const constraints = {
+          console.log('Applying constraints to match requested dimensions');
+          await videoTrack.applyConstraints({
             width: { exact: width },
             height: { exact: height }
-          };
-          await videoTrack.applyConstraints(constraints);
+          });
         }
       } else {
         finalStream = await navigator.mediaDevices.getDisplayMedia({

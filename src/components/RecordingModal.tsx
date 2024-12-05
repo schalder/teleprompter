@@ -47,10 +47,6 @@ const RecordingModal = ({
   useEffect(() => {
     if (isOpen) {
       updateDevices();
-      // Set portrait as default on mobile
-      if (window.innerWidth <= 768 && cameraResolution !== "portrait") {
-        setCameraResolution("portrait");
-      }
       navigator.mediaDevices.addEventListener('devicechange', updateDevices);
       return () => {
         navigator.mediaDevices.removeEventListener('devicechange', updateDevices);

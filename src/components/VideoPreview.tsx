@@ -34,8 +34,12 @@ const VideoPreview = ({ previewVideoRef, cameraResolution }: VideoPreviewProps) 
     };
   }, [previewVideoRef, toast]);
 
+  const aspectRatioClass = cameraResolution === "portrait" 
+    ? "aspect-[9/16] max-w-[240px]" 
+    : "aspect-[16/9] max-w-full";
+
   return (
-    <div className={`relative ${cameraResolution === "portrait" ? "w-[240px] h-[427px]" : "w-full aspect-video"} mx-auto bg-gray-800 rounded-lg overflow-hidden`}>
+    <div className={`relative ${aspectRatioClass} mx-auto bg-gray-800 rounded-lg overflow-hidden`}>
       <video
         ref={previewVideoRef}
         autoPlay

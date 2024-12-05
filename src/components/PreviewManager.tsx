@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import VideoPreview from "./VideoPreview";
+import { usePreviewStream } from "@/hooks/usePreviewStream";
 
 interface PreviewManagerProps {
   isPreviewActive: boolean;
@@ -22,66 +23,50 @@ const PreviewManager = ({
   previewVideoRef
 }: PreviewManagerProps) => {
   const { toast } = useToast();
+  const { startPreview, stopPreview } = usePreviewStream();
 
   useEffect(() => {
     const updatePreview = async () => {
       if (!isPreviewActive || recordingType !== "camera" || !hasPermissions) return;
 
       try {
-        if (previewVideoRef.current?.srcObject instanceof MediaStream) {
-          previewVideoRef.current.srcObject.getTracks().forEach(track => track.stop());
-        }
+        // Stop any existing preview
+        stopPreview();
 
         console.log('Updating preview with devices:', {
           video: selectedVideoDevice,
-          audio: selectedAudioDevice
+          audio: selectedAudioDevice,
+          aspectRatio: cameraResolution === 'landscape' ? '16:9' : '9:16'
         });
 
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: selectedVideoDevice ? {
-            deviceId: { exact: selectedVideoDevice },
-            width: { ideal: cameraResolution === "landscape" ? 1920 : 1080 },
-            height: { ideal: cameraResolution === "landscape" ? 1080 : 1920 },
-            frameRate: { ideal: 30 },
-          } : true,
-          audio: selectedAudioDevice ? {
-            deviceId: { exact: selectedAudioDevice },
-            echoCancellation: true,
-            noiseSuppression: true,
-            sampleRate: 48000,
-          } : true,
-        });
+        const success = await startPreview(
+          selectedVideoDevice,
+          selectedAudioDevice,
+          cameraResolution === 'portrait'
+        );
 
-        if (previewVideoRef.current) {
-          previewVideoRef.current.srcObject = stream;
-          await previewVideoRef.current.play().catch(e => {
-            console.error('Error playing video:', e);
-            toast({
-              variant: "destructive",
-              title: "Preview Error",
-              description: "Failed to play video preview. Please check your camera permissions.",
-            });
+        if (!success) {
+          toast({
+            variant: "destructive",
+            title: "Preview Error",
+            description: "Failed to start preview. Please check your device permissions.",
           });
-          
-          console.log('Preview updated with new devices');
-          
-          const audioTrack = stream.getAudioTracks()[0];
-          if (audioTrack) {
-            const settings = audioTrack.getSettings();
-            console.log('Preview audio track settings:', settings);
-          }
         }
       } catch (error) {
         console.error('Error updating preview:', error);
         toast({
           variant: "destructive",
           title: "Preview Error",
-          description: "Failed to update preview with selected devices.",
+          description: "An unexpected error occurred while starting the preview.",
         });
       }
     };
 
     updatePreview();
+
+    return () => {
+      stopPreview();
+    };
   }, [selectedVideoDevice, selectedAudioDevice, isPreviewActive, recordingType, cameraResolution, hasPermissions]);
 
   if (!isPreviewActive) return null;

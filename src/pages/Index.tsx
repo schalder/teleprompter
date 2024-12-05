@@ -69,6 +69,7 @@ const RecordingModal = ({
       setIsRecording(true);
       setIsModalOpen(false);
     }
+    return success;
   };
 
   return (

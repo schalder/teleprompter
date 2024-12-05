@@ -17,7 +17,7 @@ const App: React.FC = () => {
   const previewVideoRef = React.useRef<HTMLVideoElement>(null);
 
   const handleStartRecording = () => {
-    // Implement your recording logic here
+    console.log("Starting recording...");
     return true; // Return true to indicate success
   };
 

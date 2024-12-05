@@ -35,6 +35,7 @@ const Index = () => {
 
   useEffect(() => {
     if (isModalOpen) {
+      // Updated to match new signature: recordingType, cameraResolution, selectedAudioDevice
       startPreview(recordingType, cameraResolution, selectedAudioDevice);
     }
   }, [recordingType, isModalOpen, cameraResolution]);

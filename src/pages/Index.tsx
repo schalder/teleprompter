@@ -13,7 +13,7 @@ interface RecordingModalProps {
   onClose: () => void;
   recordingType: "camera" | "screen";
   setRecordingType: (type: "camera" | "screen") => void;
-  onStartRecording: () => void;
+  onStartRecording: () => boolean;
   previewVideoRef: React.RefObject<HTMLVideoElement>;
   isPreviewActive: boolean;
   cameraResolution: "landscape" | "portrait";
@@ -62,9 +62,9 @@ const RecordingModal = ({
     }
   }, [isOpen, hasPermissions]);
 
-  const handleStartRecording = async () => {
+  const handleStartRecording = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    const success = await onStartRecording();
+    const success = onStartRecording();
     if (success) {
       setIsRecording(true);
       setIsModalOpen(false);

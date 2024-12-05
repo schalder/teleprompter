@@ -26,10 +26,12 @@ const ResolutionSelector = ({
           <RadioGroupItem value="portrait" id="portrait" className="border-white text-white" />
           <Label htmlFor="portrait" className="cursor-pointer">9:16 (Portrait)</Label>
         </div>
-        <div className="flex items-center space-x-4 p-4 rounded-lg border border-gray-700 hover:bg-gray-800 cursor-pointer">
-          <RadioGroupItem value="landscape" id="landscape" className="border-white text-white" />
-          <Label htmlFor="landscape" className="cursor-pointer">16:9 (Landscape)</Label>
-        </div>
+        {!isMobile && (
+          <div className="flex items-center space-x-4 p-4 rounded-lg border border-gray-700 hover:bg-gray-800 cursor-pointer">
+            <RadioGroupItem value="landscape" id="landscape" className="border-white text-white" />
+            <Label htmlFor="landscape" className="cursor-pointer">16:9 (Landscape)</Label>
+          </div>
+        )}
       </RadioGroup>
     </div>
   );

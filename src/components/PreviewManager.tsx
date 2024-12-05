@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import VideoPreview from "./VideoPreview";
-import { getVideoConstraints } from "@/utils/videoUtils";
+import { usePreviewStream } from "@/hooks/usePreviewStream";
 
 interface PreviewManagerProps {
   isPreviewActive: boolean;
@@ -23,15 +23,15 @@ const PreviewManager = ({
   previewVideoRef
 }: PreviewManagerProps) => {
   const { toast } = useToast();
+  const { startPreview, stopPreview } = usePreviewStream();
 
   useEffect(() => {
     const updatePreview = async () => {
       if (!isPreviewActive || recordingType !== "camera" || !hasPermissions) return;
 
       try {
-        if (previewVideoRef.current?.srcObject instanceof MediaStream) {
-          previewVideoRef.current.srcObject.getTracks().forEach(track => track.stop());
-        }
+        // Stop any existing preview
+        stopPreview();
 
         console.log('Updating preview with devices:', {
           video: selectedVideoDevice,
@@ -39,40 +39,34 @@ const PreviewManager = ({
           aspectRatio: cameraResolution === 'landscape' ? '16:9' : '9:16'
         });
 
-        const videoConstraints = getVideoConstraints(cameraResolution);
-        console.log('Using video constraints:', videoConstraints);
+        const success = await startPreview(
+          selectedVideoDevice,
+          selectedAudioDevice,
+          cameraResolution === 'portrait'
+        );
 
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: selectedVideoDevice ? {
-            deviceId: { exact: selectedVideoDevice },
-            ...videoConstraints
-          } : videoConstraints,
-          audio: selectedAudioDevice ? {
-            deviceId: { exact: selectedAudioDevice },
-            echoCancellation: true,
-            noiseSuppression: true,
-            sampleRate: 48000,
-          } : true,
-        });
-
-        if (previewVideoRef.current) {
-          previewVideoRef.current.srcObject = stream;
-          await previewVideoRef.current.play();
-          console.log('Preview updated with new devices and constraints');
+        if (!success) {
+          toast({
+            variant: "destructive",
+            title: "Preview Error",
+            description: "Failed to start preview. Please check your device permissions.",
+          });
         }
       } catch (error) {
         console.error('Error updating preview:', error);
-        if (error instanceof Error && error.name === "NotAllowedError") {
-          toast({
-            variant: "destructive",
-            title: "Camera Access Required",
-            description: "Please grant camera permissions to continue.",
-          });
-        }
+        toast({
+          variant: "destructive",
+          title: "Preview Error",
+          description: "An unexpected error occurred while starting the preview.",
+        });
       }
     };
 
     updatePreview();
+
+    return () => {
+      stopPreview();
+    };
   }, [selectedVideoDevice, selectedAudioDevice, isPreviewActive, recordingType, cameraResolution, hasPermissions]);
 
   if (!isPreviewActive) return null;

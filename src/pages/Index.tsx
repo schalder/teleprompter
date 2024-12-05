@@ -51,9 +51,8 @@ const Index = () => {
   const handleStartRecording = async () => {
     scrollToTop();
     const success = await startRecording(
-      recordingType, 
+      recordingType,
       cameraResolution,
-      screenCaptureStream,
       selectedAudioDevice
     );
     if (success) {

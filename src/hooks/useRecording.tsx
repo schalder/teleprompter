@@ -1,46 +1,59 @@
 import { useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
-import { useDeviceStream } from "./useDeviceStream";
+import { getVideoConstraints } from "@/utils/videoUtils";
 
 export const useRecording = () => {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { getDeviceStream } = useDeviceStream();
 
   const startRecording = async (
-    videoDeviceId: string,
-    audioDeviceId: string,
-    isPortrait: boolean
+    recordingType: "camera" | "screen",
+    cameraResolution: "landscape" | "portrait",
+    existingStream?: MediaStream | null,
+    selectedAudioDeviceId?: string
   ) => {
     try {
-      console.log('Starting recording with devices:', {
-        video: videoDeviceId,
-        audio: audioDeviceId,
-        isPortrait
-      });
+      let finalStream: MediaStream;
 
-      // Get video stream with correct aspect ratio
-      const aspectRatio = isPortrait ? 9/16 : 16/9;
-      const videoStream = await getDeviceStream(videoDeviceId, aspectRatio);
-      
-      if (!videoStream) return false;
+      const videoConstraints = getVideoConstraints(cameraResolution);
+      console.log('Using video constraints:', videoConstraints);
 
-      // Get audio stream
-      const audioStream = await getDeviceStream(audioDeviceId, 0, true);
-      
-      if (!audioStream) {
-        videoStream.getTracks().forEach(track => track.stop());
-        return false;
+      const audioConstraints = {
+        deviceId: selectedAudioDeviceId ? { exact: selectedAudioDeviceId } : undefined,
+        echoCancellation: true,
+        noiseSuppression: true,
+        sampleRate: 48000,
+        channelCount: 2
+      };
+
+      console.log('Starting recording with audio device:', selectedAudioDeviceId);
+
+      // Clean up existing streams
+      const existingVideoElement = document.querySelector('video');
+      if (existingVideoElement?.srcObject instanceof MediaStream) {
+        existingVideoElement.srcObject.getTracks().forEach(track => track.stop());
       }
 
-      // Combine streams
-      const finalStream = new MediaStream([
-        ...videoStream.getVideoTracks(),
-        ...audioStream.getAudioTracks()
-      ]);
+      if (recordingType === "camera") {
+        finalStream = await navigator.mediaDevices.getUserMedia({
+          video: videoConstraints,
+          audio: audioConstraints
+        });
+
+        const videoTrack = finalStream.getVideoTracks()[0];
+        if (videoTrack) {
+          const settings = videoTrack.getSettings();
+          console.log('Active video track settings:', settings);
+        }
+      } else {
+        finalStream = await navigator.mediaDevices.getDisplayMedia({
+          video: true,
+          audio: audioConstraints
+        });
+      }
 
       const options = {
         mimeType: 'video/webm;codecs=h264,opus',
@@ -74,8 +87,6 @@ export const useRecording = () => {
             mimeType: mediaRecorder.mimeType 
           } 
         });
-
-        finalStream.getTracks().forEach(track => track.stop());
       };
 
       mediaRecorder.start(1000);
@@ -88,17 +99,19 @@ export const useRecording = () => {
       return true;
     } catch (error) {
       console.error("Recording error:", error);
-      toast({
-        title: "Recording Error",
-        description: "Failed to start recording. Please try again.",
-        variant: "destructive",
-      });
+      if (error instanceof Error && error.name === "NotAllowedError") {
+        toast({
+          title: "Permission Required",
+          description: "Please grant camera and microphone permissions to start recording.",
+          variant: "destructive",
+        });
+      }
       return false;
     }
   };
 
   const stopRecording = () => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+    if (mediaRecorderRef.current) {
       mediaRecorderRef.current.stop();
       return true;
     }

@@ -11,6 +11,7 @@ export const useMediaStream = () => {
   const MAX_DEVICE_CHECK_ATTEMPTS = 3;
   const screenCaptureStream = useRef<MediaStream | null>(null);
 
+  // Check if device is mobile
   const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
   const checkDeviceAvailability = async () => {
@@ -78,6 +79,7 @@ export const useMediaStream = () => {
   const startPreview = async (
     recordingType: "camera" | "screen",
     cameraResolution: "landscape" | "portrait",
+    selectedVideoDeviceId?: string,
     selectedAudioDeviceId?: string
   ) => {
     try {
@@ -88,8 +90,9 @@ export const useMediaStream = () => {
       let stream: MediaStream | null = null;
 
       if (recordingType === "camera") {
-        const effectiveResolution = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) ? "portrait" : cameraResolution;
+        const effectiveResolution = isMobile ? "portrait" : cameraResolution;
 
+        // Retry device check if needed
         const checkDevices = async () => {
           const { hasVideo, hasAudio, videoDevices } = await checkDeviceAvailability();
           if (!hasVideo || !hasAudio) {
@@ -102,7 +105,11 @@ export const useMediaStream = () => {
             throw new Error(!hasVideo ? "No camera found" : "No microphone found");
           }
 
-          return videoDevices.length > 0 ? videoDevices[0].deviceId : undefined;
+          // If no device is selected, use the first available device
+          const effectiveVideoDeviceId = selectedVideoDeviceId || 
+            (videoDevices.length > 0 ? videoDevices[0].deviceId : undefined);
+
+          return effectiveVideoDeviceId;
         };
 
         const videoDeviceId = await checkDevices();
@@ -110,7 +117,8 @@ export const useMediaStream = () => {
         const constraints = {
           video: {
             deviceId: videoDeviceId ? { exact: videoDeviceId } : undefined,
-            aspectRatio: effectiveResolution === "landscape" ? 16/9 : 9/16,
+            width: { ideal: effectiveResolution === "landscape" ? 1920 : 1080 },
+            height: { ideal: effectiveResolution === "landscape" ? 1080 : 1920 },
             frameRate: { ideal: 30 },
             facingMode: "user",
           },
@@ -128,6 +136,7 @@ export const useMediaStream = () => {
         hasPermission.current = true;
         deviceCheckAttempts.current = 0;
       } else if (recordingType === "screen") {
+        // For screen recording, get a new stream if we don't have one
         if (!screenCaptureStream.current) {
           stream = await navigator.mediaDevices.getDisplayMedia({
             video: {

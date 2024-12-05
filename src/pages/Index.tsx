@@ -52,7 +52,7 @@ const Index = () => {
     scrollToTop();
     const success = await startRecording(
       recordingType,
-      cameraResolution === "portrait",
+      cameraResolution,
       selectedAudioDevice
     );
     if (success) {

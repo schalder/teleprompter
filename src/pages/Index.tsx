@@ -2,10 +2,10 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useEffect } from "react";
-import DeviceSelector from "./DeviceSelector";
-import ResolutionSelector from "./ResolutionSelector";
-import RecordingTypeSelector from "./RecordingTypeSelector";
-import PreviewManager from "./PreviewManager";
+import DeviceSelector from "@/components/DeviceSelector";
+import ResolutionSelector from "@/components/ResolutionSelector";
+import RecordingTypeSelector from "@/components/RecordingTypeSelector";
+import PreviewManager from "@/components/PreviewManager";
 import { useDeviceManagement } from "@/hooks/useDeviceManagement";
 
 interface RecordingModalProps {
@@ -20,6 +20,8 @@ interface RecordingModalProps {
   setCameraResolution: (resolution: "landscape" | "portrait") => void;
   selectedAudioDevice: string;
   setSelectedAudioDevice: (deviceId: string) => void;
+  setIsRecording: (isRecording: boolean) => void;
+  setIsModalOpen: (isOpen: boolean) => void;
 }
 
 const RecordingModal = ({
@@ -34,6 +36,8 @@ const RecordingModal = ({
   setCameraResolution,
   selectedAudioDevice,
   setSelectedAudioDevice,
+  setIsRecording,
+  setIsModalOpen
 }: RecordingModalProps) => {
   const {
     videoDevices,
@@ -59,12 +63,8 @@ const RecordingModal = ({
   }, [isOpen, hasPermissions]);
 
   const handleStartRecording = async () => {
-    scrollToTop();
-    const success = await startRecording(
-      recordingType,
-      cameraResolution,
-      selectedAudioDevice
-    );
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    const success = await onStartRecording();
     if (success) {
       setIsRecording(true);
       setIsModalOpen(false);
@@ -126,7 +126,7 @@ const RecordingModal = ({
         
         <div className="p-6 border-t border-gray-800 mt-auto">
           <Button
-            onClick={onStartRecording}
+            onClick={handleStartRecording}
             className="w-full bg-red-500 hover:bg-red-600 text-white py-6 text-lg"
           >
             Start Recording

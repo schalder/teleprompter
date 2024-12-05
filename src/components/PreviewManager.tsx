@@ -36,14 +36,17 @@ const PreviewManager = ({
         console.log('Updating preview with devices:', {
           video: selectedVideoDevice,
           audio: selectedAudioDevice,
-          resolution: cameraResolution
+          aspectRatio: cameraResolution === 'landscape' ? '16:9' : '9:16'
         });
+
+        const videoConstraints = getVideoConstraints(cameraResolution);
+        console.log('Using video constraints:', videoConstraints);
 
         const stream = await navigator.mediaDevices.getUserMedia({
           video: selectedVideoDevice ? {
             deviceId: { exact: selectedVideoDevice },
-            ...getVideoConstraints(cameraResolution)
-          } : true,
+            ...videoConstraints
+          } : videoConstraints,
           audio: selectedAudioDevice ? {
             deviceId: { exact: selectedAudioDevice },
             echoCancellation: true,
@@ -59,7 +62,6 @@ const PreviewManager = ({
         }
       } catch (error) {
         console.error('Error updating preview:', error);
-        // Only show toast for permission errors
         if (error instanceof Error && error.name === "NotAllowedError") {
           toast({
             variant: "destructive",

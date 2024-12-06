@@ -17,6 +17,7 @@ const Index = () => {
   const [recordingType, setRecordingType] = useState<"camera" | "screen">("camera");
   const [cameraResolution, setCameraResolution] = useState<"landscape" | "portrait">("landscape");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedAudioDevice, setSelectedAudioDevice] = useState<string>("");
 
   const { 
     previewStream, 
@@ -30,8 +31,6 @@ const Index = () => {
     startRecording, 
     stopRecording 
   } = useRecording();
-
-  const [selectedAudioDevice, setSelectedAudioDevice] = useState<string>("");
 
   useEffect(() => {
     if (isModalOpen) {
@@ -50,12 +49,27 @@ const Index = () => {
 
   const handleStartRecording = async () => {
     scrollToTop();
+    console.log('Starting recording with:', {
+      type: recordingType,
+      resolution: cameraResolution,
+      stream: recordingType === "camera" ? previewStream : screenStream,
+      audioDevice: selectedAudioDevice
+    });
+    
+    const streamToUse = recordingType === "camera" ? previewStream : screenStream;
+    
+    if (!streamToUse) {
+      console.error('No stream available for recording');
+      return;
+    }
+
     const success = await startRecording(
       recordingType, 
       cameraResolution,
-      recordingType === "screen" ? screenStream : null,
+      streamToUse,
       selectedAudioDevice
     );
+    
     if (success) {
       setIsRecording(true);
       setIsModalOpen(false);

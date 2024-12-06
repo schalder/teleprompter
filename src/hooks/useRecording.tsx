@@ -11,15 +11,10 @@ export const useRecording = () => {
   const startRecording = async (
     recordingType: "camera" | "screen",
     cameraResolution: "landscape" | "portrait",
-    existingStream: MediaStream | null,
+    existingStream: MediaStream,
     selectedAudioDeviceId?: string
   ) => {
     try {
-      if (!existingStream) {
-        console.error('No stream available for recording');
-        return false;
-      }
-
       console.log('Starting recording with stream:', {
         id: existingStream.id,
         tracks: existingStream.getTracks().map(t => ({

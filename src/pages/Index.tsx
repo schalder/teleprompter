@@ -23,7 +23,7 @@ const Index = () => {
     previewVideoRef, 
     startPreview, 
     stopPreview,
-    screenCaptureStream 
+    screenStream 
   } = useMediaStream();
 
   const { 
@@ -50,12 +50,11 @@ const Index = () => {
 
   const handleStartRecording = async () => {
     scrollToTop();
-    // Pass the existing screen capture stream if available and the selected audio device
     const success = await startRecording(
       recordingType, 
       cameraResolution,
-      recordingType === "screen" ? screenCaptureStream : null,
-      selectedAudioDevice // Add this parameter
+      recordingType === "screen" ? screenStream : null,
+      selectedAudioDevice
     );
     if (success) {
       setIsRecording(true);
@@ -120,8 +119,8 @@ const Index = () => {
           isPreviewActive={!!previewStream}
           cameraResolution={cameraResolution}
           setCameraResolution={setCameraResolution}
-          selectedAudioDevice={selectedAudioDevice} // Add this prop
-          setSelectedAudioDevice={setSelectedAudioDevice} // Add this prop
+          selectedAudioDevice={selectedAudioDevice}
+          setSelectedAudioDevice={setSelectedAudioDevice}
         />
       </div>
     </div>

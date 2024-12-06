@@ -24,39 +24,59 @@ export const useRecording = () => {
         }))
       });
 
+      // Clear any existing chunks
+      chunksRef.current = [];
+
       const options = {
-        mimeType: 'video/webm;codecs=h264,opus',
-        videoBitsPerSecond: 8000000,
+        mimeType: 'video/webm;codecs=vp8,opus',
+        videoBitsPerSecond: 2500000, // Reduced for better compatibility
         audioBitsPerSecond: 128000
       };
       
+      // Fallback if vp8 is not supported
       if (!MediaRecorder.isTypeSupported(options.mimeType)) {
         options.mimeType = 'video/webm';
       }
 
       mediaRecorderRef.current = new MediaRecorder(existingStream, options);
-      chunksRef.current = [];
 
+      // Handle data available event
       mediaRecorderRef.current.ondataavailable = (event) => {
-        if (event.data.size > 0) {
+        console.log('Data chunk received:', event.data.size);
+        if (event.data && event.data.size > 0) {
           chunksRef.current.push(event.data);
         }
       };
 
+      // Handle recording stop
       mediaRecorderRef.current.onstop = () => {
+        console.log('Recording stopped, total chunks:', chunksRef.current.length);
+        
+        if (chunksRef.current.length === 0) {
+          toast({
+            title: "Recording Error",
+            description: "No data was recorded. Please try again.",
+            variant: "destructive",
+          });
+          return;
+        }
+
         const blob = new Blob(chunksRef.current, { 
-          type: mediaRecorderRef.current?.mimeType || 'video/webm' 
+          type: 'video/webm' 
         });
+        
+        console.log('Final blob size:', blob.size);
         
         navigate("/preview", { 
           state: { 
             videoUrl: URL.createObjectURL(blob), 
-            mimeType: mediaRecorderRef.current?.mimeType 
+            mimeType: 'video/webm'
           } 
         });
       };
 
-      mediaRecorderRef.current.start(1000);
+      // Request data more frequently on mobile
+      mediaRecorderRef.current.start(250);
       
       toast({
         title: "Recording started",

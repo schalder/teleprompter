@@ -8,17 +8,22 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from '@/hooks/use-toast';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface ExportOptionsProps {
   onExport: (format: string, quality: string) => void;
 }
 
 export const ExportOptions = ({ onExport }: ExportOptionsProps) => {
+  const isMobile = useIsMobile();
+  
   const handleExport = (format: string) => {
-    onExport(format, 'high');
+    // Force WebM format on mobile
+    const exportFormat = isMobile ? 'webm' : format;
+    onExport(exportFormat, 'high');
     toast({
       title: "Export Started",
-      description: `Exporting video as ${format.toUpperCase()}`,
+      description: `Exporting video as ${exportFormat.toUpperCase()}`,
     });
   };
 

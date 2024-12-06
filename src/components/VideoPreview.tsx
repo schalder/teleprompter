@@ -1,5 +1,6 @@
 import React, { useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface VideoPreviewProps {
   previewVideoRef: React.RefObject<HTMLVideoElement>;
@@ -8,6 +9,7 @@ interface VideoPreviewProps {
 
 const VideoPreview = ({ previewVideoRef, cameraResolution }: VideoPreviewProps) => {
   const { toast } = useToast();
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     const videoElement = previewVideoRef.current;
@@ -34,7 +36,12 @@ const VideoPreview = ({ previewVideoRef, cameraResolution }: VideoPreviewProps) 
     };
   }, [previewVideoRef, toast]);
 
-  const aspectRatioClass = cameraResolution === "portrait" 
+  // On mobile, flip the aspect ratio for preview while keeping the recording behavior
+  const previewAspectRatio = isMobile 
+    ? (cameraResolution === "portrait" ? "landscape" : "portrait")
+    : cameraResolution;
+
+  const aspectRatioClass = previewAspectRatio === "portrait" 
     ? "aspect-[9/16] max-w-[240px]" 
     : "aspect-[16/9] max-w-full";
 

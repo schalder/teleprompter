@@ -22,15 +22,6 @@ export const useRecording = () => {
         audioDevice: selectedAudioDeviceId
       });
 
-      console.log('Starting recording with stream:', {
-        id: existingStream.id,
-        tracks: existingStream.getTracks().map(t => ({
-          kind: t.kind,
-          label: t.label,
-          settings: t.getSettings()
-        }))
-      });
-
       // Clear any existing chunks
       chunksRef.current = [];
 

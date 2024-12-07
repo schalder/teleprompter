@@ -20,14 +20,12 @@ export const useDeviceStream = () => {
         deviceId: videoDeviceId ? { exact: videoDeviceId } : undefined,
         width: {
           min: aspectRatio === "landscape" ? 1280 : 720,
-          ideal: aspectRatio === "landscape" ? 1920 : 1080
+          ideal: aspectRatio === "landscape" ? 1920 : 1080,
         },
         height: {
           min: aspectRatio === "landscape" ? 720 : 1280,
-          ideal: aspectRatio === "landscape" ? 1080 : 1920
+          ideal: aspectRatio === "landscape" ? 1080 : 1920,
         },
-        aspectRatio: aspectRatio === "landscape" ? 16/9 : 9/16,
-        facingMode: "user",
         frameRate: { min: 24, ideal: 30 }
       };
 

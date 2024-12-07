@@ -84,6 +84,12 @@ export const useRecording = () => {
         console.log('Added selected audio track:', newAudioTrack.label);
       }
 
+      // Verify that the stream has audio tracks
+      const hasAudio = existingStream.getAudioTracks().length > 0;
+      if (!hasAudio) {
+        throw new Error('No audio tracks available in the stream.');
+      }
+
       // Clear any existing chunks
       chunksRef.current = [];
 

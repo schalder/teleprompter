@@ -11,44 +11,16 @@ export const useRecording = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Function to obtain MediaStream with constraints
-  const getMediaStream = async (
-    recordingType: RecordingType,
-    cameraResolution: CameraResolution
-  ): Promise<MediaStream> => {
-    if (recordingType === "camera") {
-      // Define resolution based on cameraResolution
-      const constraints: MediaStreamConstraints = {
-        video: {
-          width: { ideal: cameraResolution === "portrait" ? 1080 : 1920 },
-          height: { ideal: cameraResolution === "portrait" ? 1920 : 1080 },
-          aspectRatio: cameraResolution === "portrait" ? 9 / 16 : 16 / 9,
-          frameRate: { ideal: 30 },
-          facingMode: "user",
-        },
-        audio: true,
-      };
-
-      return await navigator.mediaDevices.getUserMedia(constraints);
-    } else {
-      // For screen recording, aspect ratio may vary
-      return await navigator.mediaDevices.getDisplayMedia({
-        video: {
-          frameRate: { ideal: 30 },
-        },
-        audio: true,
-      });
-    }
-  };
-
-  // Function to select the best supported MIME type
+  /**
+   * Selects the best supported MIME type for MediaRecorder.
+   * Prefers 'video/webm;codecs=vp9,opus' for higher quality if supported.
+   * Falls back to 'video/webm;codecs=vp8,opus' or 'video/webm' as needed.
+   */
   const getSupportedMimeType = (): string => {
     const mimeTypes = [
       'video/webm;codecs=vp9,opus',
       'video/webm;codecs=vp8,opus',
       'video/webm',
-      'video/mp4;codecs=avc1.42E01E,mp4a.40.2',
-      'video/mp4',
     ];
 
     for (const mimeType of mimeTypes) {
@@ -57,29 +29,42 @@ export const useRecording = () => {
       }
     }
 
-    throw new Error('No supported MIME type found for MediaRecorder.');
+    // Default MIME type if none of the above are supported
+    return 'video/webm';
   };
 
+  /**
+   * Starts recording the media stream.
+   *
+   * @param recordingType - Type of recording ('camera' or 'screen').
+   * @param cameraResolution - Desired camera resolution ('landscape' or 'portrait').
+   * @param existingStream - The MediaStream to record.
+   * @param selectedAudioDeviceId - (Optional) Specific audio device ID to use.
+   * @returns Promise<boolean> indicating success or failure.
+   */
   const startRecording = async (
     recordingType: RecordingType,
     cameraResolution: CameraResolution,
     existingStream: MediaStream,
     selectedAudioDeviceId?: string
-  ) => {
+  ): Promise<boolean> => {
     try {
       console.log('Starting recording with stream:', {
         id: existingStream.id,
         tracks: existingStream.getTracks().map(t => ({
           kind: t.kind,
           label: t.label,
-          settings: t.getSettings(),
-        })),
+          settings: t.getSettings()
+        }))
       });
 
       // If a specific audio device is selected, adjust the audio tracks
       if (selectedAudioDeviceId) {
         const audioDevices = await navigator.mediaDevices.enumerateDevices();
-        const selectedDevice = audioDevices.find(device => device.deviceId === selectedAudioDeviceId && device.kind === 'audioinput');
+        const selectedDevice = audioDevices.find(
+          device => device.deviceId === selectedAudioDeviceId && device.kind === 'audioinput'
+        );
+
         if (!selectedDevice) {
           throw new Error('Selected audio device not found.');
         }
@@ -88,7 +73,7 @@ export const useRecording = () => {
         const audioTracks = existingStream.getAudioTracks();
         audioTracks.forEach(track => track.stop());
 
-        // Create new audio track with the selected device
+        // Acquire a new audio track from the selected device
         const audioConstraints = {
           audio: { deviceId: { exact: selectedAudioDeviceId } },
           video: false,
@@ -106,12 +91,17 @@ export const useRecording = () => {
       const mimeType = getSupportedMimeType();
       console.log('Using MIME type:', mimeType);
 
+      // Adjust video bitrate based on resolution for better quality
+      // Example: 12 Mbps for portrait (1080p), 24 Mbps for landscape (1920x1080)
+      const videoBitsPerSecond = cameraResolution === "portrait" ? 12000000 : 24000000;
+
       const options: MediaRecorderOptions = {
         mimeType,
-        videoBitsPerSecond: cameraResolution === "portrait" ? 8000000 : 12000000, // Adjust based on resolution
+        videoBitsPerSecond, // Higher bitrate for better quality
         audioBitsPerSecond: 256000, // Increased for better audio quality
       };
 
+      // Initialize MediaRecorder with the existing stream and options
       mediaRecorderRef.current = new MediaRecorder(existingStream, options);
       console.log('MediaRecorder initialized:', mediaRecorderRef.current);
 
@@ -123,7 +113,7 @@ export const useRecording = () => {
         }
       };
 
-      // Handle recording stop
+      // Handle recording stop event
       mediaRecorderRef.current.onstop = () => {
         console.log('Recording stopped, total chunks:', chunksRef.current.length);
 
@@ -136,9 +126,11 @@ export const useRecording = () => {
           return;
         }
 
+        // Create a Blob from the recorded chunks
         const blob = new Blob(chunksRef.current, { type: mimeType });
         console.log('Final blob size:', blob.size);
 
+        // Navigate to the preview page with the recorded video URL
         navigate("/preview", { 
           state: { 
             videoUrl: URL.createObjectURL(blob), 
@@ -154,6 +146,7 @@ export const useRecording = () => {
       mediaRecorderRef.current.start(250);
       console.log('Recording started');
 
+      // Notify the user that recording has started
       toast({
         title: "Recording started",
         description: "Click Stop when you're done recording.",
@@ -162,16 +155,47 @@ export const useRecording = () => {
       return true;
     } catch (error) {
       console.error("Recording error:", error);
+
+      // Enhanced error handling with specific messages
+      let description = "Failed to start recording. Please try again.";
+
+      if (error instanceof DOMException) {
+        switch (error.name) {
+          case 'NotAllowedError':
+            description = "Permission denied. Please allow access to your camera and microphone.";
+            break;
+          case 'NotFoundError':
+            description = "Required media device not found. Please ensure your camera and microphone are connected.";
+            break;
+          case 'NotReadableError':
+            description = "Media device is currently in use. Please close other applications that might be using it.";
+            break;
+          case 'OverconstrainedError':
+            description = "The specified constraints are not supported by your device.";
+            break;
+          default:
+            description = error.message;
+        }
+      } else if (error instanceof Error) {
+        description = error.message;
+      }
+
+      // Display the error to the user
       toast({
         title: "Recording Error",
-        description: `Failed to start recording: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`,
+        description,
         variant: "destructive",
       });
       return false;
     }
   };
 
-  const stopRecording = () => {
+  /**
+   * Stops the ongoing recording.
+   *
+   * @returns boolean indicating whether a recording was stopped.
+   */
+  const stopRecording = (): boolean => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop();
       console.log('Recording stopped by user');

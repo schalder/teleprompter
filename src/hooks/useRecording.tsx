@@ -1,7 +1,9 @@
-// src/hooks/useRecording.tsx
 import { useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
+
+type RecordingType = "camera" | "screen";
+type CameraResolution = "landscape" | "portrait";
 
 export const useRecording = () => {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -9,45 +11,89 @@ export const useRecording = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  // Function to obtain MediaStream with constraints
+  const getMediaStream = async (
+    recordingType: RecordingType,
+    cameraResolution: CameraResolution
+  ): Promise<MediaStream> => {
+    if (recordingType === "camera") {
+      // Define resolution based on cameraResolution
+      let constraints: MediaStreamConstraints = {
+        video: {
+          // Enforce exact width and height for aspect ratio
+          width: cameraResolution === "portrait" ? 1080 : 1920,
+          height: cameraResolution === "portrait" ? 1920 : 1080,
+          facingMode: "user",
+          // Optional: frameRate can be set for smoother video
+          frameRate: { ideal: 30 },
+        },
+        audio: true,
+      };
+
+      // You can also make resolution configurable if needed
+      // For example, accept desired resolution as a parameter
+
+      return await navigator.mediaDevices.getUserMedia(constraints);
+    } else {
+      // For screen recording, you might not have strict aspect ratio control
+      return await navigator.mediaDevices.getDisplayMedia({
+        video: true,
+        audio: true,
+      });
+    }
+  };
+
   const startRecording = async (
-    recordingType: "camera" | "screen",
-    cameraResolution: "landscape" | "portrait",
-    existingStream: MediaStream,
+    recordingType: RecordingType,
+    cameraResolution: CameraResolution,
     selectedAudioDeviceId?: string
   ) => {
     try {
+      // Obtain MediaStream with desired constraints
+      const stream = await getMediaStream(recordingType, cameraResolution);
+
+      // If a specific audio device is selected, adjust the audio tracks
+      if (selectedAudioDeviceId) {
+        const audioTracks = stream.getAudioTracks();
+        if (audioTracks.length > 0) {
+          // Stop existing audio tracks
+          audioTracks.forEach((track) => track.stop());
+
+          // Create new audio track with the selected device
+          const audioConstraints = {
+            audio: { deviceId: { exact: selectedAudioDeviceId } },
+            video: false,
+          };
+          const audioStream = await navigator.mediaDevices.getUserMedia(audioConstraints);
+          const newAudioTrack = audioStream.getAudioTracks()[0];
+          stream.addTrack(newAudioTrack);
+        }
+      }
+
       console.log('Starting recording with stream:', {
-        id: existingStream.id,
-        tracks: existingStream.getTracks().map(t => ({
+        id: stream.id,
+        tracks: stream.getTracks().map(t => ({
           kind: t.kind,
           label: t.label,
-          settings: t.getSettings()
-        }))
+          settings: t.getSettings(),
+        })),
       });
 
       // Clear any existing chunks
       chunksRef.current = [];
 
-      // Define initial recording options for HD
-      let options: MediaRecorderOptions = {
+      const options: MediaRecorderOptions = {
         mimeType: 'video/webm;codecs=vp8,opus',
-        videoBitsPerSecond: 5000000, // 5 Mbps for 1080p HD
-        audioBitsPerSecond: 128000
+        videoBitsPerSecond: 8000000, // 8 Mbps for high quality
+        audioBitsPerSecond: 192000,  // 192 Kbps for audio
       };
       
-      // Check if VP8 is supported; fallback to VP9 or H264
+      // Fallback if vp8 is not supported
       if (!MediaRecorder.isTypeSupported(options.mimeType)) {
-        options.mimeType = 'video/webm;codecs=vp9,opus';
-        if (!MediaRecorder.isTypeSupported(options.mimeType)) {
-          options.mimeType = 'video/mp4;codecs=h264,opus';
-          if (!MediaRecorder.isTypeSupported(options.mimeType)) {
-            // Fallback to default if none are supported
-            options = {};
-          }
-        }
+        options.mimeType = 'video/webm';
       }
 
-      mediaRecorderRef.current = new MediaRecorder(existingStream, options);
+      mediaRecorderRef.current = new MediaRecorder(stream, options);
 
       // Handle data available event
       mediaRecorderRef.current.ondataavailable = (event) => {
@@ -71,21 +117,23 @@ export const useRecording = () => {
         }
 
         const blob = new Blob(chunksRef.current, { 
-          type: mediaRecorderRef.current?.mimeType || 'video/webm' 
+          type: 'video/webm' 
         });
         
         console.log('Final blob size:', blob.size);
         
-        // Navigate to preview with the recorded video URL
         navigate("/preview", { 
           state: { 
             videoUrl: URL.createObjectURL(blob), 
-            mimeType: mediaRecorderRef.current?.mimeType || 'video/webm'
+            mimeType: 'video/webm',
           } 
         });
+
+        // Stop all tracks to release resources
+        stream.getTracks().forEach(track => track.stop());
       };
 
-      // Start recording with timeslice for better handling on mobile
+      // Start recording, requesting data every 250ms (more frequent for better responsiveness)
       mediaRecorderRef.current.start(250);
       
       toast({

@@ -63,14 +63,13 @@ export const useRecording = () => {
   const startRecording = async (
     recordingType: RecordingType,
     cameraResolution: CameraResolution,
+    existingStream: MediaStream,
     selectedAudioDeviceId?: string
   ) => {
     try {
-      // Obtain MediaStream with desired constraints
-      const stream = await getMediaStream(recordingType, cameraResolution);
-      console.log('Stream acquired:', {
-        id: stream.id,
-        tracks: stream.getTracks().map(t => ({
+      console.log('Starting recording with stream:', {
+        id: existingStream.id,
+        tracks: existingStream.getTracks().map(t => ({
           kind: t.kind,
           label: t.label,
           settings: t.getSettings(),
@@ -86,7 +85,7 @@ export const useRecording = () => {
         }
 
         // Stop existing audio tracks
-        const audioTracks = stream.getAudioTracks();
+        const audioTracks = existingStream.getAudioTracks();
         audioTracks.forEach(track => track.stop());
 
         // Create new audio track with the selected device
@@ -96,7 +95,7 @@ export const useRecording = () => {
         };
         const audioStream = await navigator.mediaDevices.getUserMedia(audioConstraints);
         const newAudioTrack = audioStream.getAudioTracks()[0];
-        stream.addTrack(newAudioTrack);
+        existingStream.addTrack(newAudioTrack);
         console.log('Added selected audio track:', newAudioTrack.label);
       }
 
@@ -113,7 +112,7 @@ export const useRecording = () => {
         audioBitsPerSecond: 256000, // Increased for better audio quality
       };
 
-      mediaRecorderRef.current = new MediaRecorder(stream, options);
+      mediaRecorderRef.current = new MediaRecorder(existingStream, options);
       console.log('MediaRecorder initialized:', mediaRecorderRef.current);
 
       // Handle data available event
@@ -148,7 +147,7 @@ export const useRecording = () => {
         });
 
         // Stop all tracks to release resources
-        stream.getTracks().forEach(track => track.stop());
+        existingStream.getTracks().forEach(track => track.stop());
       };
 
       // Start recording, requesting data every 250ms

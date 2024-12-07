@@ -18,29 +18,38 @@ export const useRecording = () => {
   ): Promise<MediaStream> => {
     if (recordingType === "camera") {
       // Define resolution based on cameraResolution
-      let constraints: MediaStreamConstraints = {
+      const constraints: MediaStreamConstraints = {
         video: {
-          // Enforce exact width and height for aspect ratio
-          width: cameraResolution === "portrait" ? 1080 : 1920,
-          height: cameraResolution === "portrait" ? 1920 : 1080,
+          width: { ideal: cameraResolution === "portrait" ? 720 : 1280 },
+          height: { ideal: cameraResolution === "portrait" ? 1280 : 720 },
           facingMode: "user",
-          // Optional: frameRate can be set for smoother video
           frameRate: { ideal: 30 },
         },
         audio: true,
       };
 
-      // You can also make resolution configurable if needed
-      // For example, accept desired resolution as a parameter
-
       return await navigator.mediaDevices.getUserMedia(constraints);
     } else {
-      // For screen recording, you might not have strict aspect ratio control
+      // For screen recording, aspect ratio may vary
       return await navigator.mediaDevices.getDisplayMedia({
         video: true,
         audio: true,
       });
     }
+  };
+
+  const getSupportedMimeType = (): string => {
+    const supportedTypes = [
+      'video/webm;codecs=vp8,opus',
+      'video/webm',
+      'video/mp4',
+    ];
+    for (const type of supportedTypes) {
+      if (MediaRecorder.isTypeSupported(type)) {
+        return type;
+      }
+    }
+    throw new Error('No supported MIME type found for MediaRecorder.');
   };
 
   const startRecording = async (
@@ -51,26 +60,7 @@ export const useRecording = () => {
     try {
       // Obtain MediaStream with desired constraints
       const stream = await getMediaStream(recordingType, cameraResolution);
-
-      // If a specific audio device is selected, adjust the audio tracks
-      if (selectedAudioDeviceId) {
-        const audioTracks = stream.getAudioTracks();
-        if (audioTracks.length > 0) {
-          // Stop existing audio tracks
-          audioTracks.forEach((track) => track.stop());
-
-          // Create new audio track with the selected device
-          const audioConstraints = {
-            audio: { deviceId: { exact: selectedAudioDeviceId } },
-            video: false,
-          };
-          const audioStream = await navigator.mediaDevices.getUserMedia(audioConstraints);
-          const newAudioTrack = audioStream.getAudioTracks()[0];
-          stream.addTrack(newAudioTrack);
-        }
-      }
-
-      console.log('Starting recording with stream:', {
+      console.log('Stream acquired:', {
         id: stream.id,
         tracks: stream.getTracks().map(t => ({
           kind: t.kind,
@@ -79,21 +69,44 @@ export const useRecording = () => {
         })),
       });
 
+      // If a specific audio device is selected, adjust the audio tracks
+      if (selectedAudioDeviceId) {
+        const audioDevices = await navigator.mediaDevices.enumerateDevices();
+        const selectedDevice = audioDevices.find(device => device.deviceId === selectedAudioDeviceId && device.kind === 'audioinput');
+        if (!selectedDevice) {
+          throw new Error('Selected audio device not found.');
+        }
+
+        // Stop existing audio tracks
+        const audioTracks = stream.getAudioTracks();
+        audioTracks.forEach(track => track.stop());
+
+        // Create new audio track with the selected device
+        const audioConstraints = {
+          audio: { deviceId: { exact: selectedAudioDeviceId } },
+          video: false,
+        };
+        const audioStream = await navigator.mediaDevices.getUserMedia(audioConstraints);
+        const newAudioTrack = audioStream.getAudioTracks()[0];
+        stream.addTrack(newAudioTrack);
+        console.log('Added selected audio track:', newAudioTrack.label);
+      }
+
       // Clear any existing chunks
       chunksRef.current = [];
 
+      // Determine supported MIME type
+      const mimeType = getSupportedMimeType();
+      console.log('Using MIME type:', mimeType);
+
       const options: MediaRecorderOptions = {
-        mimeType: 'video/webm;codecs=vp8,opus',
+        mimeType,
         videoBitsPerSecond: 8000000, // 8 Mbps for high quality
         audioBitsPerSecond: 192000,  // 192 Kbps for audio
       };
-      
-      // Fallback if vp8 is not supported
-      if (!MediaRecorder.isTypeSupported(options.mimeType)) {
-        options.mimeType = 'video/webm';
-      }
 
       mediaRecorderRef.current = new MediaRecorder(stream, options);
+      console.log('MediaRecorder initialized:', mediaRecorderRef.current);
 
       // Handle data available event
       mediaRecorderRef.current.ondataavailable = (event) => {
@@ -106,7 +119,7 @@ export const useRecording = () => {
       // Handle recording stop
       mediaRecorderRef.current.onstop = () => {
         console.log('Recording stopped, total chunks:', chunksRef.current.length);
-        
+
         if (chunksRef.current.length === 0) {
           toast({
             title: "Recording Error",
@@ -116,16 +129,13 @@ export const useRecording = () => {
           return;
         }
 
-        const blob = new Blob(chunksRef.current, { 
-          type: 'video/webm' 
-        });
-        
+        const blob = new Blob(chunksRef.current, { type: mimeType });
         console.log('Final blob size:', blob.size);
-        
+
         navigate("/preview", { 
           state: { 
             videoUrl: URL.createObjectURL(blob), 
-            mimeType: 'video/webm',
+            mimeType,
           } 
         });
 
@@ -133,9 +143,10 @@ export const useRecording = () => {
         stream.getTracks().forEach(track => track.stop());
       };
 
-      // Start recording, requesting data every 250ms (more frequent for better responsiveness)
+      // Start recording, requesting data every 250ms
       mediaRecorderRef.current.start(250);
-      
+      console.log('Recording started');
+
       toast({
         title: "Recording started",
         description: "Click Stop when you're done recording.",
@@ -146,7 +157,7 @@ export const useRecording = () => {
       console.error("Recording error:", error);
       toast({
         title: "Recording Error",
-        description: "Failed to start recording. Please try again.",
+        description: `Failed to start recording: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`,
         variant: "destructive",
       });
       return false;
@@ -156,8 +167,10 @@ export const useRecording = () => {
   const stopRecording = () => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop();
+      console.log('Recording stopped by user');
       return true;
     }
+    console.warn('No active recording to stop');
     return false;
   };
 

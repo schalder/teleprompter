@@ -34,7 +34,7 @@ const TeleprompterControls = ({
           value={[speed]}
           onValueChange={(value) => setSpeed(value[0])}
           min={1}
-          max={60}
+          max={20}
           step={1}
           className="w-full touch-none"
         />

@@ -29,23 +29,13 @@ export const useRecording = () => {
 
       const options = {
         mimeType: 'video/webm;codecs=vp8,opus',
-        videoBitsPerSecond: 8000000, // Increased to 8 Mbps for better quality
-        audioBitsPerSecond: 192000 // Increased audio quality as well
+        videoBitsPerSecond: 2500000, // Reduced for better compatibility
+        audioBitsPerSecond: 128000
       };
       
       // Fallback if vp8 is not supported
       if (!MediaRecorder.isTypeSupported(options.mimeType)) {
         options.mimeType = 'video/webm';
-      }
-
-      // Configure video track for better quality
-      const videoTrack = existingStream.getVideoTracks()[0];
-      if (videoTrack) {
-        await videoTrack.applyConstraints({
-          width: { ideal: 1920 },
-          height: { ideal: 1080 },
-          frameRate: { ideal: 30 }
-        });
       }
 
       mediaRecorderRef.current = new MediaRecorder(existingStream, options);

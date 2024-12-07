@@ -15,11 +15,13 @@ export const useRecording = () => {
     selectedAudioDeviceId?: string
   ) => {
     try {
-      console.log('Starting recording with:', {
-        type: recordingType,
-        resolution: cameraResolution,
-        stream: existingStream,
-        audioDevice: selectedAudioDeviceId
+      console.log('Starting recording with stream:', {
+        id: existingStream.id,
+        tracks: existingStream.getTracks().map(t => ({
+          kind: t.kind,
+          label: t.label,
+          settings: t.getSettings()
+        }))
       });
 
       // Clear any existing chunks
@@ -27,7 +29,7 @@ export const useRecording = () => {
 
       const options = {
         mimeType: 'video/webm;codecs=vp8,opus',
-        videoBitsPerSecond: 12000000, // 12 Mbps for higher quality
+        videoBitsPerSecond: 2500000, // Reduced for better compatibility
         audioBitsPerSecond: 128000
       };
       
@@ -73,7 +75,7 @@ export const useRecording = () => {
         });
       };
 
-      // Request data more frequently for better quality
+      // Request data more frequently on mobile
       mediaRecorderRef.current.start(250);
       
       toast({

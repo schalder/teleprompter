@@ -18,8 +18,11 @@ export const useDeviceStream = () => {
       const constraints = {
         video: {
           deviceId: videoDeviceId ? { exact: videoDeviceId } : undefined,
+          width: { min: 1280, ideal: 1920 },
+          height: { min: 720, ideal: 1080 },
           aspectRatio: aspectRatio === "landscape" ? 16/9 : 9/16,
           facingMode: "user",
+          frameRate: { min: 24, ideal: 30 }
         },
         audio: {
           deviceId: audioDeviceId ? { exact: audioDeviceId } : undefined,

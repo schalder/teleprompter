@@ -29,7 +29,7 @@ export const useRecording = () => {
 
       const options = {
         mimeType: 'video/webm;codecs=vp8,opus',
-        videoBitsPerSecond: 2500000, // Reduced for better compatibility
+        videoBitsPerSecond: 8000000, // Increased to 8 Mbps for HD quality
         audioBitsPerSecond: 128000
       };
       
@@ -75,7 +75,7 @@ export const useRecording = () => {
         });
       };
 
-      // Request data more frequently on mobile
+      // Request data more frequently for better quality
       mediaRecorderRef.current.start(250);
       
       toast({

@@ -15,6 +15,13 @@ export const useRecording = () => {
     selectedAudioDeviceId?: string
   ) => {
     try {
+      console.log('Starting recording with:', {
+        type: recordingType,
+        resolution: cameraResolution,
+        stream: existingStream,
+        audioDevice: selectedAudioDeviceId
+      });
+
       console.log('Starting recording with stream:', {
         id: existingStream.id,
         tracks: existingStream.getTracks().map(t => ({
@@ -29,7 +36,7 @@ export const useRecording = () => {
 
       const options = {
         mimeType: 'video/webm;codecs=vp8,opus',
-        videoBitsPerSecond: 8000000, // 8 Mbps for HD quality
+        videoBitsPerSecond: 12000000, // 12 Mbps for higher quality
         audioBitsPerSecond: 128000
       };
       

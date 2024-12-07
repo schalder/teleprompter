@@ -29,7 +29,7 @@ export const useRecording = () => {
 
       const options = {
         mimeType: 'video/webm;codecs=vp8,opus',
-        videoBitsPerSecond: 8000000, // Increased to 8 Mbps for HD quality
+        videoBitsPerSecond: 8000000, // 8 Mbps for HD quality
         audioBitsPerSecond: 128000
       };
       

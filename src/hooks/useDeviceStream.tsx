@@ -15,15 +15,22 @@ export const useDeviceStream = () => {
         stream.getTracks().forEach((track) => track.stop());
       }
 
+      // Set video constraints based on aspect ratio
+      const videoConstraints = {
+        deviceId: videoDeviceId ? { exact: videoDeviceId } : undefined,
+        width: aspectRatio === "landscape" 
+          ? { min: 1280, ideal: 1920 }  // 16:9 landscape
+          : { min: 720, ideal: 1080 },   // 9:16 portrait
+        height: aspectRatio === "landscape"
+          ? { min: 720, ideal: 1080 }    // 16:9 landscape
+          : { min: 1280, ideal: 1920 },  // 9:16 portrait
+        aspectRatio: aspectRatio === "landscape" ? 16/9 : 9/16,
+        facingMode: "user",
+        frameRate: { min: 24, ideal: 30 }
+      };
+
       const constraints = {
-        video: {
-          deviceId: videoDeviceId ? { exact: videoDeviceId } : undefined,
-          width: { min: 1280, ideal: 1920 },
-          height: { min: 720, ideal: 1080 },
-          aspectRatio: aspectRatio === "landscape" ? 16/9 : 9/16,
-          facingMode: "user",
-          frameRate: { min: 24, ideal: 30 }
-        },
+        video: videoConstraints,
         audio: {
           deviceId: audioDeviceId ? { exact: audioDeviceId } : undefined,
           echoCancellation: true,

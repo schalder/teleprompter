@@ -71,7 +71,10 @@ export const useRecording = () => {
 
         // Stop existing audio tracks
         const audioTracks = existingStream.getAudioTracks();
-        audioTracks.forEach(track => track.stop());
+        audioTracks.forEach(track => {
+          console.log(`Stopping audio track: ${track.label}`);
+          track.stop();
+        });
 
         // Acquire a new audio track from the selected device
         const audioConstraints = {
@@ -79,6 +82,11 @@ export const useRecording = () => {
           video: false,
         };
         const audioStream = await navigator.mediaDevices.getUserMedia(audioConstraints);
+        
+        if (audioStream.getAudioTracks().length === 0) {
+          throw new Error('Failed to acquire audio track from the selected device.');
+        }
+
         const newAudioTrack = audioStream.getAudioTracks()[0];
         existingStream.addTrack(newAudioTrack);
         console.log('Added selected audio track:', newAudioTrack.label);
@@ -107,8 +115,14 @@ export const useRecording = () => {
         audioBitsPerSecond: 256000, // Increased for better audio quality
       };
 
-      // Initialize MediaRecorder with the existing stream and options
-      mediaRecorderRef.current = new MediaRecorder(existingStream, options);
+      // Combine video and audio tracks into a new MediaStream
+      const combinedStream = new MediaStream([
+        ...existingStream.getVideoTracks(),
+        ...existingStream.getAudioTracks(),
+      ]);
+
+      // Initialize MediaRecorder with the combined stream and options
+      mediaRecorderRef.current = new MediaRecorder(combinedStream, options);
       console.log('MediaRecorder initialized:', mediaRecorderRef.current);
 
       // Handle data available event

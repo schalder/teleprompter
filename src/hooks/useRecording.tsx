@@ -30,7 +30,7 @@ export const useRecording = () => {
       const options = {
         mimeType: 'video/webm;codecs=vp8,opus',
         videoBitsPerSecond: 8000000, // Reduced for better compatibility
-        audioBitsPerSecond: 128000
+        audioBitsPerSecond: 192000
       };
       
       // Fallback if vp8 is not supported

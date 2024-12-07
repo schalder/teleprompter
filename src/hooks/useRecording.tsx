@@ -1,3 +1,4 @@
+// src/hooks/useRecording.tsx
 import { useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
@@ -27,15 +28,23 @@ export const useRecording = () => {
       // Clear any existing chunks
       chunksRef.current = [];
 
-      const options = {
+      // Define initial recording options for HD
+      let options: MediaRecorderOptions = {
         mimeType: 'video/webm;codecs=vp8,opus',
-        videoBitsPerSecond: 8000000, // Reduced for better compatibility
-        audioBitsPerSecond: 192000
+        videoBitsPerSecond: 5000000, // 5 Mbps for 1080p HD
+        audioBitsPerSecond: 128000
       };
       
-      // Fallback if vp8 is not supported
+      // Check if VP8 is supported; fallback to VP9 or H264
       if (!MediaRecorder.isTypeSupported(options.mimeType)) {
-        options.mimeType = 'video/webm';
+        options.mimeType = 'video/webm;codecs=vp9,opus';
+        if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+          options.mimeType = 'video/mp4;codecs=h264,opus';
+          if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+            // Fallback to default if none are supported
+            options = {};
+          }
+        }
       }
 
       mediaRecorderRef.current = new MediaRecorder(existingStream, options);
@@ -62,20 +71,21 @@ export const useRecording = () => {
         }
 
         const blob = new Blob(chunksRef.current, { 
-          type: 'video/webm' 
+          type: mediaRecorderRef.current?.mimeType || 'video/webm' 
         });
         
         console.log('Final blob size:', blob.size);
         
+        // Navigate to preview with the recorded video URL
         navigate("/preview", { 
           state: { 
             videoUrl: URL.createObjectURL(blob), 
-            mimeType: 'video/webm'
+            mimeType: mediaRecorderRef.current?.mimeType || 'video/webm'
           } 
         });
       };
 
-      // Request data more frequently on mobile
+      // Start recording with timeslice for better handling on mobile
       mediaRecorderRef.current.start(250);
       
       toast({
